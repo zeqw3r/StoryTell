@@ -1,0 +1,15 @@
+{
+  "block.storytell.example_block2": "Первый блок.",
+
+  "tooltip.item.storytell.example_block2": "первый",
+
+  "block.storytell.upgrade_transmitter": "Улучшенный приемник",
+
+  "tooltip.item.storytell.upgrade_transmitter": "Эффективнее ловит сигналы и визуализирует их",
+
+  "block.storytell.radio": "Радио",
+
+  "tooltip.item.storytell.radio": "Старинное радио, которое воспроизводит звуки из эфира",
+
+  "item.storytell.radio": "Радио"
+}

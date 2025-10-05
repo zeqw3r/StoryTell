@@ -1,0 +1,15 @@
+{
+  "block.storytell.example_block2": "First block",
+
+  "tooltip.item.storytell.example_block2": "First",
+
+  "block.storytell.upgrade_transmitter": "Upgrade Transmitter",
+
+  "tooltip.item.storytell.upgrade_transmitter": "More effectively catches signals and visualizes them",
+
+  "block.storytell.radio": "Radio",
+
+  "tooltip.item.storytell.radio": "An old radio that plays sounds from the airwaves",
+
+  "item.storytell.radio": "Radio"
+}

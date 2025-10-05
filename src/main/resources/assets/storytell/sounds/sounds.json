@@ -1,0 +1,20 @@
+{
+  "hologram_appear": {
+    "subtitle": "subtitles.storytell.hologram_appear",
+    "sounds": [
+      "storytell:hologram_appear"
+    ]
+  },
+  "hologram_disappear": {
+    "subtitle": "subtitles.storytell.hologram_disappear",
+    "sounds": [
+      "storytell:hologram_disappear"
+    ]
+  },
+  "hologram_ambient": {
+    "subtitle": "subtitles.storytell.hologram_ambient",
+    "sounds": [
+      "storytell:hologram_ambient"
+    ]
+  }
+}

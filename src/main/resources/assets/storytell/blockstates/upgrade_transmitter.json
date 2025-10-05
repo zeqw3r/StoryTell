@@ -1,0 +1,7 @@
+{
+    "variants": {
+        "": {
+            "model": "storytell:block/upgrade_transmitter"
+        }
+    }
+}

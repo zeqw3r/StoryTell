@@ -1,0 +1,44 @@
+{
+  "hologram_appear": {
+    "subtitle": "subtitles.storytell.hologram_appear",
+    "sounds": [
+      "storytell:hologram_appear"
+    ]
+  },
+  "hologram_disappear": {
+    "subtitle": "subtitles.storytell.hologram_disappear",
+    "sounds": [
+      "storytell:hologram_disappear"
+    ]
+  },
+  "hologram_ambient": {
+    "subtitle": "subtitles.storytell.hologram_ambient",
+    "sounds": [
+      "storytell:hologram_ambient"
+    ]
+  },
+  "radio_static": {
+    "subtitle": "subtitles.storytell.radio_static",
+    "sounds": [
+      "storytell:radio_static"
+    ]
+  },
+  "radio_music": {
+    "subtitle": "subtitles.storytell.radio_music",
+    "sounds": [
+      "storytell:radio_music"
+    ]
+  },
+  "radio_enable": {
+    "subtitle": "subtitles.storytell.radio_enable",
+    "sounds": [
+      "storytell:radio_enable"
+    ]
+  },
+  "radio_disable": {
+    "subtitle": "subtitles.storytell.radio_disable",
+    "sounds": [
+      "storytell:radio_disable"
+    ]
+  }
+}

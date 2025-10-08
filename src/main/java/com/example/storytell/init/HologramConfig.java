@@ -13,6 +13,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class HologramConfig {
     private static final String CONFIG_FILE_NAME = "storytell_config.json";
@@ -23,7 +25,7 @@ public class HologramConfig {
     // Внутренний класс для хранения всех конфигурационных данных
     private static class ConfigData {
         String hologramTexture = "minecraft:textures/block/stone.png";
-        String radioSound = "storytell:radio_static"; // Добавлено поле для звука радио
+        String radioSound = "storytell:radio_static";
         List<String> bossList = new ArrayList<>(Arrays.asList(
                 "fdbosses:chesed",
                 "fdbosses:malkuth",
@@ -36,6 +38,8 @@ public class HologramConfig {
                 "cataclysm:ignis",
                 "cataclysm:netherite_monstrosity"
         ));
+        Set<String> seenPlayers = new HashSet<>();
+        Set<String> pendingPlayers = new HashSet<>(); // Новое поле для игроков, ожидающих подтверждения
     }
 
     public static void init() {
@@ -52,6 +56,7 @@ public class HologramConfig {
                 String json = Files.readString(configFile);
                 configData = GSON.fromJson(json, ConfigData.class);
                 System.out.println("Loaded StoryTell config with " + configData.bossList.size() + " bosses");
+                System.out.println("Loaded " + configData.seenPlayers.size() + " seen players");
             } else {
                 // Создаем файл с настройками по умолчанию
                 configData = new ConfigData();
@@ -158,7 +163,7 @@ public class HologramConfig {
         saveConfig();
     }
 
-    // НОВЫЕ МЕТОДЫ ДЛЯ РАДИО
+    // Методы для радио
     public static String getRadioSound() {
         if (!initialized) init();
         return configData.radioSound;
@@ -182,5 +187,44 @@ public class HologramConfig {
             System.err.println("Failed to save radio sound: " + e.getMessage());
             return false;
         }
+    }
+
+    // Методы для отслеживания игроков
+    public static boolean hasPlayerSeenCutscene(String playerName) {
+        if (!initialized) init();
+        return configData.seenPlayers.contains(playerName.toLowerCase());
+    }
+
+    public static void markPlayerAsSeen(String playerName) {
+        if (!initialized) init();
+        configData.seenPlayers.add(playerName.toLowerCase());
+        saveConfig();
+    }
+
+    public static Set<String> getSeenPlayers() {
+        if (!initialized) init();
+        return new HashSet<>(configData.seenPlayers);
+    }
+
+    // Новые методы для ожидания подтверждения
+    public static void addPendingPlayer(String playerName) {
+        if (!initialized) init();
+        configData.pendingPlayers.add(playerName.toLowerCase());
+        // Не сохраняем в конфиг, так как это временное состояние
+    }
+
+    public static boolean isPlayerPending(String playerName) {
+        if (!initialized) init();
+        return configData.pendingPlayers.contains(playerName.toLowerCase());
+    }
+
+    public static void removePendingPlayer(String playerName) {
+        if (!initialized) init();
+        configData.pendingPlayers.remove(playerName.toLowerCase());
+    }
+
+    public static Set<String> getPendingPlayers() {
+        if (!initialized) init();
+        return new HashSet<>(configData.pendingPlayers);
     }
 }

@@ -3,6 +3,8 @@ package com.example.storytell;
 import com.example.storytell.init.HologramConfig;
 import com.example.storytell.init.boss.BossCommands;
 import com.example.storytell.init.blocks.*;
+import com.example.storytell.init.cutscene.CutsceneCommand;
+import com.example.storytell.init.cutscene.CutsceneNetworkHandler;
 import com.example.storytell.init.radio.ModRadioBlockEntities;
 import com.example.storytell.init.radio.ModRadioBlocks;
 import com.example.storytell.init.radio.ModRadioItems;
@@ -13,6 +15,7 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import com.example.storytell.init.ModSounds;
@@ -34,17 +37,31 @@ public class StoryTell {
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModEntities.register(); // Регистрация сущностей
         ModSounds.SOUND_EVENTS.register(modEventBus); // Регистрация звуков
-
+        CutsceneNetworkHandler.register();
 
         // Регистрируем обработчики событий
         MinecraftForge.EVENT_BUS.register(this);
-
 
         ModRadioBlocks.BLOCKS.register(modEventBus);
         ModRadioBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModRadioItems.ITEMS.register(modEventBus);
 
-        LOGGER.info("StoryTell mod initialized with star system");
+        modEventBus.addListener(this::commonSetup);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event) {
+        // Регистрируем сетевые пакеты
+        event.enqueueWork(() -> {
+            CutsceneNetworkHandler.register();
+            System.out.println("Cutscene network handler registered in common setup");
+        });
+    }
+
+    private void setup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            CutsceneNetworkHandler.register();
+        });
     }
 
     @SubscribeEvent
@@ -53,5 +70,6 @@ public class StoryTell {
         HoloCommand.register(event.getDispatcher());
         BossCommands.register(event.getDispatcher()); // Регистрируем команды для боссов
         RadioCommand.register(event.getDispatcher());
+        CutsceneCommand.register(event.getDispatcher());
     }
 }

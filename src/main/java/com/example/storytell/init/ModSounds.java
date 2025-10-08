@@ -32,8 +32,14 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> HOLOGRAM_AMBIENT =
             registerSoundEvent("hologram_ambient");
 
+    public static final RegistryObject<SoundEvent> MUSIC_1 =
+            registerSoundEvent("music_1");
+
+    public static final RegistryObject<SoundEvent> MUSIC =
+            registerSoundEvent("music");
+
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
-        return SOUND_EVENTS.register(name, () ->
-                SoundEvent.createVariableRangeEvent(new ResourceLocation("storytell", name)));
+        ResourceLocation location = new ResourceLocation("storytell", name);
+        return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(location));
     }
 }

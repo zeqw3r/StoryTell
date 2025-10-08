@@ -40,5 +40,17 @@
     "sounds": [
       "storytell:radio_disable"
     ]
+  },
+  "music_1": {
+    "subtitle": "subtitles.storytell.music_1",
+    "sounds": [
+      "storytell:music_1"
+    ]
+  },
+  "music": {
+    "subtitle": "subtitles.storytell.music_1",
+    "sounds": [
+      "storytell:music"
+    ]
   }
 }

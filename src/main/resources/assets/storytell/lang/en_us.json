@@ -11,5 +11,7 @@
 
   "tooltip.item.storytell.radio": "An old radio that plays sounds from the airwaves",
 
-  "item.storytell.radio": "Radio"
+  "item.storytell.radio": "Radio",
+
+  "item.storytell.robot_shard": "Robot Shard"
 }

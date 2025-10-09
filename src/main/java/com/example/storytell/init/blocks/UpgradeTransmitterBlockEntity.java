@@ -1,6 +1,7 @@
-// UpgradeTransmitterBlockEntity.java (упрощенная версия)
+// UpgradeTransmitterBlockEntity.java (исправленная версия)
 package com.example.storytell.init.blocks;
 
+import com.example.storytell.init.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -85,8 +86,8 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
             }
         }
 
-        // Создаём новую голограмму
-        HologramEntity holo = new HologramEntity(ModEntities.HOLOGRAM_ENTITY_TYPE.get(), level);
+        // Создаём новую голограмму - ИСПРАВЛЕННАЯ СТРОКА
+        HologramEntity holo = new HologramEntity(ModEntities.HOLOGRAM_ENTITY.get(), level);
         BlockPos pos = getBlockPos();
         holo.moveTo(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 0.0F, 0.0F);
 

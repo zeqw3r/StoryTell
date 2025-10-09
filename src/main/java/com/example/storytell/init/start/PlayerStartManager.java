@@ -136,22 +136,24 @@ public class PlayerStartManager {
         // Удаляем игрока из карты позиций
         previousPositions.remove(player.getUUID());
 
-        // Запускаем cutscene 1 для игрока
-        String command = "cutscene " + playerName + " 1";
-        int result = player.getServer().getCommands().performPrefixedCommand(
+        // Запускаем катсцену
+        String cutsceneCommand = "cutscene @a[name=" + playerName + "] 1";
+        int cutsceneResult = player.getServer().getCommands().performPrefixedCommand(
                 player.getServer().createCommandSourceStack(),
-                command
+                cutsceneCommand
         );
 
+        System.out.println("Cutscene command result for " + playerName + ": " + cutsceneResult);
+
         // Команда считается успешной, если возвращает положительное значение
-        boolean success = result > 0;
+        boolean success = cutsceneResult > 0;
 
         if (success) {
             // Помечаем игрока как видевшего cutscene только если команда выполнена успешно
             HologramConfig.markPlayerAsSeen(playerName);
-            System.out.println("Cutscene successfully triggered for player: " + playerName + " (result: " + result + ")");
+            System.out.println("Cutscene successfully triggered for player: " + playerName);
         } else {
-            System.out.println("Failed to trigger cutscene for player: " + playerName + " (result: " + result + ")");
+            System.out.println("Failed to trigger cutscene for player: " + playerName);
             // Если команда не сработала, оставляем игрока в pending для повторной попытки
             HologramConfig.addPendingPlayer(playerName);
         }

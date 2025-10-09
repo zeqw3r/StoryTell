@@ -29,10 +29,11 @@ public class CutsceneCommand {
 
                                     // Воспроизводим музыку для выбранных игроков
                                     for (ServerPlayer player : targets) {
+                                        // Используем execute для правильного позиционирования звука
                                         String playSoundCommand = String.format(
-                                                "playsound %s master %s",
-                                                soundName,
-                                                player.getGameProfile().getName()
+                                                "execute as %s at @s run playsound %s master @s ~ ~ ~ 1 1 1",
+                                                player.getGameProfile().getName(),
+                                                soundName
                                         );
 
                                         // Выполняем команду playsound на сервере

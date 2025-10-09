@@ -1,3 +1,4 @@
+// StoryTell.java
 package com.example.storytell;
 
 import com.example.storytell.init.HologramConfig;
@@ -19,6 +20,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import com.example.storytell.init.ModSounds;
+import com.example.storytell.init.ModItems;
+import com.example.storytell.init.ModEntities;
 
 @Mod(StoryTell.MODID)
 public class StoryTell {
@@ -32,11 +35,11 @@ public class StoryTell {
         HologramConfig.init();
 
         // Регистрируем все компоненты в правильном порядке
+        ModEntities.ENTITY_TYPES.register(modEventBus); // Регистрируем все сущности
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-        ModEntities.register(); // Регистрация сущностей
-        ModSounds.SOUND_EVENTS.register(modEventBus); // Регистрация звуков
+        ModSounds.SOUND_EVENTS.register(modEventBus);
         CutsceneNetworkHandler.register();
 
         // Регистрируем обработчики событий
@@ -47,7 +50,7 @@ public class StoryTell {
         ModRadioItems.ITEMS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -58,17 +61,11 @@ public class StoryTell {
         });
     }
 
-    private void setup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            CutsceneNetworkHandler.register();
-        });
-    }
-
     @SubscribeEvent
     public void registerCommands(RegisterCommandsEvent event) {
         // Регистрируем все команды
         HoloCommand.register(event.getDispatcher());
-        BossCommands.register(event.getDispatcher()); // Регистрируем команды для боссов
+        BossCommands.register(event.getDispatcher());
         RadioCommand.register(event.getDispatcher());
         CutsceneCommand.register(event.getDispatcher());
     }

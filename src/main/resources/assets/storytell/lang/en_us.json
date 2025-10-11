@@ -13,5 +13,8 @@
 
   "item.storytell.radio": "Radio",
 
-  "item.storytell.robot_shard": "Robot Shard"
+  "item.storytell.robot_shard": "Robot Shard",
+
+  "death.attack.orbital_strike": "%1$s was obliterated by an orbital strike",
+  "death.attack.orbital_strike.player": "%1$s was obliterated by an orbital strike from %2$s"
 }

@@ -16,5 +16,11 @@
     "sounds": [
       "storytell:hologram_ambient"
     ]
+  },
+  "event1": {
+    "subtitle": "subtitles.storytell.event1",
+    "sounds": [
+      "storytell:event1"
+    ]
   }
 }

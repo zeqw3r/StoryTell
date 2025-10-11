@@ -52,5 +52,11 @@
     "sounds": [
       "storytell:music"
     ]
+  },
+  "event1": {
+    "subtitle": "subtitles.storytell.event1",
+    "sounds": [
+      "storytell:event1"
+    ]
   }
 }

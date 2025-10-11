@@ -38,6 +38,9 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> MUSIC =
             registerSoundEvent("music");
 
+    public static final RegistryObject<SoundEvent> EVENT1 =
+            registerSoundEvent("event1");
+
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation location = new ResourceLocation("storytell", name);
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(location));

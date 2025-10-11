@@ -6,11 +6,19 @@ import com.example.storytell.init.boss.BossCommands;
 import com.example.storytell.init.blocks.*;
 import com.example.storytell.init.cutscene.CutsceneCommand;
 import com.example.storytell.init.cutscene.CutsceneNetworkHandler;
+import com.example.storytell.init.event.Event1Command;
+import com.example.storytell.init.network.NetworkHandler;
 import com.example.storytell.init.radio.ModRadioBlockEntities;
 import com.example.storytell.init.radio.ModRadioBlocks;
 import com.example.storytell.init.radio.ModRadioItems;
 import com.example.storytell.init.radio.RadioCommand;
+import com.example.storytell.init.shake.CameraBreathCommand;
+import com.example.storytell.init.shake.ScreenShakeCommand;
+import com.example.storytell.init.star.StarMoveCommand;
+import com.example.storytell.init.strike.OrbitalStrikeCommand;
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -35,7 +43,7 @@ public class StoryTell {
         HologramConfig.init();
 
         // Регистрируем все компоненты в правильном порядке
-        ModEntities.ENTITY_TYPES.register(modEventBus); // Регистрируем все сущности
+        ModEntities.ENTITY_TYPES.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
@@ -49,24 +57,27 @@ public class StoryTell {
         ModRadioBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModRadioItems.ITEMS.register(modEventBus);
 
+        NetworkHandler.register();
         modEventBus.addListener(this::commonSetup);
-
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Регистрируем сетевые пакеты
         event.enqueueWork(() -> {
             CutsceneNetworkHandler.register();
-            System.out.println("Cutscene network handler registered in common setup");
+            System.out.println("StoryTell mod common setup completed");
         });
     }
 
     @SubscribeEvent
     public void registerCommands(RegisterCommandsEvent event) {
-        // Регистрируем все команды
         HoloCommand.register(event.getDispatcher());
         BossCommands.register(event.getDispatcher());
         RadioCommand.register(event.getDispatcher());
         CutsceneCommand.register(event.getDispatcher());
+        OrbitalStrikeCommand.register(event.getDispatcher());
+        ScreenShakeCommand.register(event.getDispatcher());
+        Event1Command.register(event.getDispatcher());
+        StarMoveCommand.register(event.getDispatcher());
+        CameraBreathCommand.register(event.getDispatcher());
     }
 }

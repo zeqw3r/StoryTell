@@ -317,6 +317,7 @@ public class REPO extends PathfinderMob {
     // Добавляем обработку удаления entity
     @Override
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
+        this.targetPlayerUUID = null; // Очищаем целевого игрока
         REPOSpawnManager.setActiveRepo(null);
         super.remove(reason);
     }

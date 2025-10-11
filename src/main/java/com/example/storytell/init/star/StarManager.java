@@ -1,6 +1,7 @@
 // StarManager.java
 package com.example.storytell.init.star;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -49,11 +50,56 @@ public class StarManager {
         return initialized;
     }
 
+    public static CustomStar getStarByName(String name) {
+        for (CustomStar star : stars) {
+            if (star.getName().equals(name)) {
+                return star;
+            }
+        }
+        return null;
+    }
+
+    public static void applyStarOffset(String starName, float offsetX, float offsetY, float offsetZ, int duration) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            Runnable onExpire = () -> {
+                System.out.println("Star " + starName + " returned to base position");
+                star.resetToBasePosition();
+            };
+            star.applyPositionModifier("offset", offsetX, offsetY, offsetZ, duration, onExpire);
+            System.out.println("Applied star offset: " + starName + " moved by (" + offsetX + ", " + offsetY + ", " + offsetZ + ") for " + duration + " ticks");
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    public static void moveStarAbovePlayer(String starName, ServerPlayer player, float height, int duration) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            // Calculate position directly above player
+            float playerY = (float) player.getY();
+            float newY = playerY + height;
+
+            Runnable onExpire = () -> {
+                System.out.println("Star " + starName + " returned to base position");
+                star.resetToBasePosition();
+            };
+
+            // Use player_position type to set absolute Y position above player
+            star.applyPositionModifier("player_position", 0, newY, 0, duration, onExpire);
+            System.out.println("Moved star " + starName + " above player " + player.getScoreboardName() +
+                    " at height " + height + " for " + duration + " ticks");
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
     public static void updateStars(float partialTick) {
         if (!initialized) return;
 
         for (CustomStar star : stars) {
             // Future: individual star movement logic could go here
+            // Modifiers are now handled in CustomStar.render()
         }
     }
 }

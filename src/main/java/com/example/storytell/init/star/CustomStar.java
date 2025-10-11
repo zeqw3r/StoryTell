@@ -13,6 +13,7 @@ import net.minecraft.util.RandomSource;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CustomStar {
@@ -28,12 +29,16 @@ public class CustomStar {
 
     // Position fields
     private float x, y, z;
+    private final float baseX, baseY, baseZ;
 
     // Animation properties
     private float rotationAngle = 0.0f;
     private final float rotationSpeed;
     private final float pulseSpeed;
     private final float pulseAmount;
+
+    // Modifiers
+    private final List<StarModifierManager.StarModifier> activeModifiers = new ArrayList<>();
 
     public CustomStar(String name, String modelPath, float size, int color,
                       float rightAscension, float declination, float distance,
@@ -50,11 +55,16 @@ public class CustomStar {
         this.pulseAmount = pulseAmount;
 
         calculatePosition();
+        // Store base position
+        this.baseX = x;
+        this.baseY = y;
+        this.baseZ = z;
     }
 
     public void render(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
-        // Update animation
+        // Update animation and apply modifiers
         updateAnimation(partialTick);
+        updatePositionWithModifiers();
 
         // Setup rendering
         RenderSystem.enableBlend();
@@ -106,6 +116,44 @@ public class CustomStar {
         if (rotationAngle >= 360.0f) {
             rotationAngle -= 360.0f;
         }
+    }
+
+    private void updatePositionWithModifiers() {
+        // Reset to base position
+        this.x = baseX;
+        this.y = baseY;
+        this.z = baseZ;
+
+        // Apply all active modifiers
+        List<StarModifierManager.StarModifier> modifiers = StarModifierManager.getModifiers(name);
+        for (StarModifierManager.StarModifier modifier : modifiers) {
+            if (modifier.getType().equals("offset")) {
+                // Apply offset to all coordinates
+                this.x += modifier.getX();
+                this.y += modifier.getY();
+                this.z += modifier.getZ();
+            } else if (modifier.getType().equals("player_position")) {
+                // For player-relative positioning
+                this.y = modifier.getY();
+            }
+        }
+
+        // Update local list
+        this.activeModifiers.clear();
+        this.activeModifiers.addAll(modifiers);
+    }
+
+    public void applyPositionModifier(String type, float x, float y, float z, int duration, Runnable onExpire) {
+        StarModifierManager.StarModifier modifier = new StarModifierManager.StarModifier(type, x, y, z, duration, onExpire);
+        StarModifierManager.addModifier(name, modifier);
+        updatePositionWithModifiers();
+    }
+
+    public void resetToBasePosition() {
+        this.x = baseX;
+        this.y = baseY;
+        this.z = baseZ;
+        StarModifierManager.removeModifiers(name);
     }
 
     private boolean renderJsonModel(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize,
@@ -192,4 +240,7 @@ public class CustomStar {
     public float getRightAscension() { return rightAscension; }
     public float getDeclination() { return declination; }
     public float getDistance() { return distance; }
+    public float getBaseX() { return baseX; }
+    public float getBaseY() { return baseY; }
+    public float getBaseZ() { return baseZ; }
 }

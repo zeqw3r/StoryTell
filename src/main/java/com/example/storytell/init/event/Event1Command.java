@@ -44,7 +44,7 @@ public class Event1Command {
                 // Execute commands sequentially with delays
                 server.execute(() -> {
                     // 1. Look up command (immediate)
-                    executeLookCommand(server, commandSourceStack, commandDispatcher, playerName);
+                    executeLookCommand(server, commandSourceStack, commandDispatcher, playerName, -85);
 
                     server.execute(() -> {
                         // 2. Screen shake after 2 ticks
@@ -85,11 +85,11 @@ public class Event1Command {
     }
 
     private static void executeLookCommand(MinecraftServer server, CommandSourceStack commandSourceStack,
-                                           CommandDispatcher<CommandSourceStack> commandDispatcher, String playerName) {
+                                           CommandDispatcher<CommandSourceStack> commandDispatcher, String playerName, float angle) {
         try {
             String lookCommand = String.format(Locale.ROOT,
-                    "execute as %s at %s run teleport %s ~ ~ ~ facing ~ 1000 ~",
-                    playerName, playerName, playerName);
+                    "execute as %s at %s run teleport %s ~ ~ ~ ~ %s",
+                    playerName, playerName, playerName, angle);
 
             ParseResults<CommandSourceStack> lookResults = commandDispatcher.parse(lookCommand, commandSourceStack);
             int lookResult = server.getCommands().performCommand(lookResults, lookCommand);
@@ -102,7 +102,7 @@ public class Event1Command {
     private static void executeShakeCommand(MinecraftServer server, CommandSourceStack commandSourceStack,
                                             CommandDispatcher<CommandSourceStack> commandDispatcher, String playerName) {
         try {
-            String shakeCommand = String.format("screenshake %s 1 345", playerName);
+            String shakeCommand = String.format("screenshake %s 1.1 345", playerName);
             ParseResults<CommandSourceStack> shakeResults = commandDispatcher.parse(shakeCommand, commandSourceStack);
             int shakeResult = server.getCommands().performCommand(shakeResults, shakeCommand);
 

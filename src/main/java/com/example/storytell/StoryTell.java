@@ -34,7 +34,7 @@ import com.example.storytell.init.ModEntities;
 @Mod(StoryTell.MODID)
 public class StoryTell {
     public static final String MODID = "storytell";
-    private static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public StoryTell() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();

@@ -1,11 +1,15 @@
 package com.example.storytell.init.shake;
 
+import com.example.storytell.StoryTell;
+import com.example.storytell.init.util.CustomPerlinNoiseGenerator;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.server.ServerLifecycleHooks;
+import org.checkerframework.checker.units.qual.C;
+import org.joml.Vector2f;
 
 import java.util.*;
 
@@ -54,15 +58,17 @@ public class ScreenShakeHandler {
         // Вычисляем прогресс тряски (от 1 до 0)
         float progress = data.timer / (float)data.duration;
 
-        // Экспоненциальное затухание для более плавного окончания
-        float decay = (float)Math.pow(progress, 1.5f);
-
         // Вычисляем тряску с затуханием
-        float trauma = data.power * decay;
+        float trauma = progress * data.power;
 
-        // Генерируем плавные случайные колебания с помощью шума Перлина
-        float shakeYaw = calculateShakeOffset(trauma, data.timer, 0);
-        float shakePitch = calculateShakeOffset(trauma, data.timer, 1000);
+        float maximumAngularShake = 2f * data.power;
+
+        Vector2f new_rot = new Vector2f(
+                maximumAngularShake * (calculateShakeOffset(data.power, data.timer, data.seed, 0, 0.5f) * trauma),
+                maximumAngularShake * (calculateShakeOffset(data.power, data.timer, data.seed, 100, 0.5f) * trauma));
+
+        float shakeYaw = new_rot.x;
+        float shakePitch = new_rot.y;
 
         // Применяем тряску к исходному повороту
         float newYaw = data.initialYaw + shakeYaw;
@@ -74,43 +80,13 @@ public class ScreenShakeHandler {
         applyShakeEffect(player, newYaw, newPitch);
     }
 
-    private static float calculateShakeOffset(float trauma, int timer, int seedOffset) {
+    private static float calculateShakeOffset(float size, int timer, double seed, int seedOffset, float smooth_factor) {
         // Используем упрощенный шум Перлина для плавных колебаний
-        float time = timer * 0.1f;
-
-        // Генерируем несколько октав шума для более естественного вида
-        float noise = perlinNoise(time + seedOffset, seedOffset) * 0.5f +
-                perlinNoise(time * 2f + seedOffset, seedOffset + 100) * 0.25f +
-                perlinNoise(time * 4f + seedOffset, seedOffset + 200) * 0.125f;
+        float time = timer * smooth_factor;
+        CustomPerlinNoiseGenerator generator = new CustomPerlinNoiseGenerator();
 
         // Умножаем на травму для регулировки интенсивности
-        return noise * trauma * 25f; // Множитель для усиления эффекта
-    }
-
-    private static float perlinNoise(float x, int seed) {
-        // Упрощенная реализация шума Перлина
-        Random noiseRandom = new Random(seed);
-        int x0 = (int)Math.floor(x);
-        int x1 = x0 + 1;
-
-        float dx = x - x0;
-
-        // Интерполяция между двумя случайными значениями
-        float g0 = noiseRandom.nextFloat() * 2 - 1;
-        float g1 = noiseRandom.nextFloat() * 2 - 1;
-
-        // Кубическая интерполяция для плавности
-        dx = smoothStep(dx);
-
-        return lerp(g0, g1, dx);
-    }
-
-    private static float smoothStep(float x) {
-        return x * x * (3 - 2 * x);
-    }
-
-    private static float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
+        return (float) generator.noise(time + seedOffset, seed + seedOffset, size);
     }
 
     private static void applyShakeEffect(ServerPlayer player, float yaw, float pitch) {
@@ -152,6 +128,7 @@ public class ScreenShakeHandler {
         public int timer;
         public float initialYaw;
         public float initialPitch;
+        public double seed;
 
         public ShakeData(float power, int duration, float initialYaw, float initialPitch) {
             this.power = power;
@@ -159,6 +136,7 @@ public class ScreenShakeHandler {
             this.timer = duration;
             this.initialYaw = initialYaw;
             this.initialPitch = initialPitch;
+            this.seed = RANDOM.nextDouble();
         }
     }
 }

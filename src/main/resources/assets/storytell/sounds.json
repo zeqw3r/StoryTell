@@ -58,5 +58,35 @@
     "sounds": [
       "storytell:event1"
     ]
+  },
+  "event2": {
+    "subtitle": "subtitles.storytell.event2",
+    "sounds": [
+      "storytell:event2"
+    ]
+  },
+  "event3": {
+    "subtitle": "subtitles.storytell.event3",
+    "sounds": [
+      "storytell:event3"
+    ]
+  },
+  "event4": {
+    "subtitle": "subtitles.storytell.event4",
+    "sounds": [
+      "storytell:event4"
+    ]
+  },
+  "tablet1": {
+    "subtitle": "subtitles.storytell.tablet1",
+    "sounds": [
+      "storytell:tablet1"
+    ]
+  },
+  "event6": {
+    "subtitle": "subtitles.storytell.event6",
+    "sounds": [
+      "storytell:event6"
+    ]
   }
 }

@@ -15,6 +15,9 @@
 
   "item.storytell.robot_shard": "Robot Shard",
 
-  "death.attack.orbital_strike": "%1$s was obliterated by an orbital strike",
-  "death.attack.orbital_strike.player": "%1$s was obliterated by an orbital strike from %2$s"
+  "item.storytell.news_tablet": "News Tablet",
+
+  "screen.storytell.upgrade_transmitter": "Upgrade Transmitter Terminal",
+  "screen.storytell.enter_command": "Enter command:",
+  "button.storytell.send": "Send"
 }

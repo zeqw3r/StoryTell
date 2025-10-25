@@ -15,6 +15,10 @@
 
   "item.storytell.robot_shard": "Осколок робота",
 
-  "death.attack.orbital_strike": "%1$s был уничтожен орбитальным ударом",
-  "death.attack.orbital_strike.player": "%1$s был уничтожен орбитальным ударом от %2$s"
+  "item.storytell.news_tablet": "Новостной планшет",
+
+  "screen.storytell.upgrade_transmitter": "Терминал Улучшенного Передатчика",
+  "screen.storytell.enter_command": "Введите команду:",
+  "button.storytell.send": "Отправить"
+
 }

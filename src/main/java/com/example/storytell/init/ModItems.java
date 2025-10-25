@@ -4,6 +4,7 @@ package com.example.storytell.init;
 import com.example.storytell.init.blocks.ModBlocks;
 import com.example.storytell.init.blocks.UpgradeTransmitterBlockItem;
 import com.example.storytell.init.item.RobotShard;
+import com.example.storytell.init.tablet.NewsTabletItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -20,4 +21,6 @@ public class ModItems {
             ITEMS.register("upgrade_transmitter", () ->
                     new UpgradeTransmitterBlockItem(ModBlocks.UPGRADE_TRANSMITTER_BLOCK.get(),
                             new Item.Properties()));
+    public static final RegistryObject<Item> NEWS_TABLET = ITEMS.register("news_tablet",
+            () -> new NewsTabletItem(new Item.Properties().stacksTo(1)));
 }

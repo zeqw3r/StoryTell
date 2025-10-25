@@ -6,7 +6,8 @@ import com.example.storytell.init.boss.BossCommands;
 import com.example.storytell.init.blocks.*;
 import com.example.storytell.init.cutscene.CutsceneCommand;
 import com.example.storytell.init.cutscene.CutsceneNetworkHandler;
-import com.example.storytell.init.event.Event1Command;
+import com.example.storytell.init.entity.RepoSpawnCommand;
+import com.example.storytell.init.event.*;
 import com.example.storytell.init.network.NetworkHandler;
 import com.example.storytell.init.radio.ModRadioBlockEntities;
 import com.example.storytell.init.radio.ModRadioBlocks;
@@ -15,7 +16,10 @@ import com.example.storytell.init.radio.RadioCommand;
 import com.example.storytell.init.shake.CameraBreathCommand;
 import com.example.storytell.init.shake.ScreenShakeCommand;
 import com.example.storytell.init.star.StarMoveCommand;
+import com.example.storytell.init.star.StarVisibilityCommand;
 import com.example.storytell.init.strike.OrbitalStrikeCommand;
+import com.example.storytell.init.tablet.TabletCommand;
+import com.example.storytell.init.world.WorldModelCommand;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
@@ -64,6 +68,7 @@ public class StoryTell {
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             CutsceneNetworkHandler.register();
+            NetworkHandler.register();
             System.out.println("StoryTell mod common setup completed");
         });
     }
@@ -79,5 +84,15 @@ public class StoryTell {
         Event1Command.register(event.getDispatcher());
         StarMoveCommand.register(event.getDispatcher());
         CameraBreathCommand.register(event.getDispatcher());
+        StarVisibilityCommand.register(event.getDispatcher());
+        Event2Command.register(event.getDispatcher());
+        RepoSpawnCommand.register(event.getDispatcher());
+        Event3Command.register(event.getDispatcher());
+        WorldModelCommand.register(event.getDispatcher());
+        Event4Command.register(event.getDispatcher());
+        Event5Command.register(event.getDispatcher());
+        Event6Command.register(event.getDispatcher());
+        Event7Command.register(event.getDispatcher());
+        TabletCommand.register(event.getDispatcher());
     }
 }

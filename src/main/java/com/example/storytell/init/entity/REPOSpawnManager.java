@@ -1,6 +1,7 @@
 // REPOSpawnManager.java
 package com.example.storytell.init.entity;
 
+import com.example.storytell.init.HologramConfig;
 import com.example.storytell.init.ModEntities;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,6 +25,11 @@ public class REPOSpawnManager {
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+
+        // ПРОВЕРКА: Если спавн REPO выключен в конфиге - пропускаем
+        if (!HologramConfig.isRepoSpawnEnabled()) {
+            return;
+        }
 
         // Проверяем спавн каждые 10 секунд для производительности
         if (event.getServer().getTickCount() % 200 != 0) return;

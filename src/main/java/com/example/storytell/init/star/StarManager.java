@@ -19,8 +19,8 @@ public class StarManager {
 
         System.out.println("Initializing custom star system with JSON models...");
 
-        // Create only one star for testing
-        stars.add(new CustomStar(
+        // Создаем звезду, загружая настройки из конфига если есть
+        CustomStar blueStar = new CustomStar(
                 "blue_star",
                 "star/blue_star",
                 50.0f,        // Size
@@ -30,11 +30,23 @@ public class StarManager {
                 150.0f,      // Distance
                 0.5f,        // Rotation speed
                 2.0f,        // Pulse speed
-                0.3f         // Pulse amount
-        ));
+                0.3f,        // Pulse amount
+                true         // Default visibility - visible
+        );
+
+        stars.add(blueStar);
+
+        // Удалена звезда meteor
 
         initialized = true;
-        System.out.println("Custom star system initialized with " + stars.size() + " star");
+        System.out.println("Custom star system initialized with " + stars.size() + " stars");
+
+        // Выводим информацию о загруженных настройках
+        com.example.storytell.init.HologramConfig.StarSettings blueStarSettings =
+                com.example.storytell.init.HologramConfig.getStarSettings("blue_star");
+        if (blueStarSettings != null) {
+            System.out.println("Loaded blue_star settings from config: visible=" + blueStarSettings.visible);
+        }
     }
 
     @SubscribeEvent
@@ -73,6 +85,32 @@ public class StarManager {
         }
     }
 
+    // Новый метод для плавного перемещения с выбором типа easing
+    public static void applySmoothMovement(String starName, float targetX, float targetY, float targetZ,
+                                           int duration, String easingType) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            // Получаем текущую позицию звезды
+            float currentX = star.getX();
+            float currentY = star.getY();
+            float currentZ = star.getZ();
+
+            Runnable onExpire = () -> {
+                System.out.println("Smooth movement completed for star " + starName);
+                // Звезда остается в конечной позиции после завершения анимации
+            };
+
+            star.applySmoothMovement(currentX, currentY, currentZ, targetX, targetY, targetZ,
+                    duration, onExpire, easingType);
+            System.out.println("Started smooth movement for star " + starName +
+                    " from (" + currentX + ", " + currentY + ", " + currentZ + ") " +
+                    "to (" + targetX + ", " + targetY + ", " + targetZ + ") " +
+                    "over " + duration + " ticks with easing: " + easingType);
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
     public static void moveStarAbovePlayer(String starName, ServerPlayer player, float height, int duration) {
         CustomStar star = getStarByName(starName);
         if (star != null) {
@@ -89,6 +127,38 @@ public class StarManager {
             star.applyPositionModifier("player_position", 0, newY, 0, duration, onExpire);
             System.out.println("Moved star " + starName + " above player " + player.getScoreboardName() +
                     " at height " + height + " for " + duration + " ticks");
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    public static void setStarVisibility(String starName, boolean visible) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            star.setVisible(visible);
+            System.out.println("Set star " + starName + " visibility to: " + visible);
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    public static void resetStarVisibility(String starName) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            star.resetToDefaultVisibility();
+            System.out.println("Reset star " + starName + " visibility to default: " + star.getDefaultVisible());
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    // Метод для удаления звезды
+    public static void removeStar(String starName) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            stars.remove(star);
+            star.removeFromConfig();
+            System.out.println("Removed star: " + starName);
         } else {
             System.err.println("Star not found: " + starName);
         }

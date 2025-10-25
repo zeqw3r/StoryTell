@@ -2,6 +2,7 @@
 package com.example.storytell.init.blocks;
 
 import com.example.storytell.init.HologramConfig;
+import com.example.storytell.init.ModSounds;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -15,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.registries.RegistryObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,7 +39,12 @@ public class HologramEntity extends Entity {
     private boolean hasPlayedDisappearSound = false;
     private int ambientSoundTimer = 0;
     private boolean isAmbientSoundPlaying = false;
-    private static final int AMBIENT_SOUND_INTERVAL = 20; // 1 секунда (20 тиков)
+    private static final int AMBIENT_SOUND_INTERVAL = 20;
+
+    // Поля для эффекта мерцания
+    private float flickerIntensity = 0.0f;
+    private int flickerTimer = 0;
+    private static final int FLICKER_INTERVAL = 5;
 
     public HologramEntity(EntityType<?> type, Level world) {
         super(type, world);
@@ -60,12 +67,16 @@ public class HologramEntity extends Entity {
 
     @Override
     protected void readAdditionalSaveData(CompoundTag compound) {
-        setTextureFromConfig();
+        if (compound.contains("Texture")) {
+            setTextureFromString(compound.getString("Texture"));
+        } else {
+            setTextureFromConfig();
+        }
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag compound) {
-        // Не сохраняем текстуру в NBT, всегда используем из конфига
+        compound.putString("Texture", this.entityData.get(DATA_TEXTURE));
     }
 
     @Override
@@ -132,8 +143,8 @@ public class HologramEntity extends Entity {
     }
 
     public void startDisappearing() {
+        this.hasPlayedDisappearSound = false;
         this.entityData.set(DATA_IS_APPEARING, false);
-        // Сбрасываем таймер эмбиент-звука при начале исчезновения
         ambientSoundTimer = 0;
         isAmbientSoundPlaying = false;
     }
@@ -141,14 +152,21 @@ public class HologramEntity extends Entity {
     private void playHologramSound(SoundEvent sound, float volume) {
         Level level = this.level();
         if (level != null && !level.isClientSide()) {
-            // Проверяем, что звук не null
             if (sound == null) {
-                LOGGER.error("Custom SoundEvent is null! Check ModSounds registration.");
+                LOGGER.warn("Attempted to play null sound event");
                 return;
             }
 
-            // Воспроизводим кастомный звук
             level.playSound(null, this.getX(), this.getY(), this.getZ(), sound, SoundSource.BLOCKS, volume, 1.0F);
+        }
+    }
+
+    private SoundEvent getSafeSoundEvent(RegistryObject<SoundEvent> soundEvent) {
+        try {
+            return soundEvent != null ? soundEvent.get() : null;
+        } catch (IllegalStateException e) {
+            LOGGER.warn("Sound event not ready: " + e.getMessage());
+            return null;
         }
     }
 
@@ -160,13 +178,16 @@ public class HologramEntity extends Entity {
         float currentProgress = getAnimationProgress();
         float currentOffset = getVerticalOffset();
 
-        // Воспроизведение звука появления - КАСТОМНЫЙ ЗВУК
-        if (isAppearing() && !hasPlayedAppearSound && currentProgress > 0.3F) {
-            playHologramSound(ModSounds.HOLOGRAM_APPEAR.get(), 0.8F);
-            hasPlayedAppearSound = true;
+        updateFlickerEffect();
 
-            // Сразу запускаем эмбиент-звук после звука появления
-            ambientSoundTimer = AMBIENT_SOUND_INTERVAL - 5; // Почти сразу воспроизведем
+        // Воспроизведение звука появления
+        if (isAppearing() && !hasPlayedAppearSound && currentProgress > 0.3F) {
+            SoundEvent appearSound = getSafeSoundEvent(ModSounds.HOLOGRAM_APPEAR);
+            if (appearSound != null) {
+                playHologramSound(appearSound, 0.8F);
+            }
+            hasPlayedAppearSound = true;
+            ambientSoundTimer = AMBIENT_SOUND_INTERVAL - 5;
             isAmbientSoundPlaying = true;
         }
 
@@ -183,9 +204,12 @@ public class HologramEntity extends Entity {
                 setVerticalOffset(0.0F);
             }
         } else {
-            // Воспроизведение звука исчезновения - КАСТОМНЫЙ ЗВУК
+            // Воспроизведение звука исчезновения
             if (!hasPlayedDisappearSound && currentProgress > 0.5F) {
-                playHologramSound(ModSounds.HOLOGRAM_DISAPPEAR.get(), 0.8F);
+                SoundEvent disappearSound = getSafeSoundEvent(ModSounds.HOLOGRAM_DISAPPEAR);
+                if (disappearSound != null) {
+                    playHologramSound(disappearSound, 0.8F);
+                }
                 hasPlayedDisappearSound = true;
             }
 
@@ -206,23 +230,36 @@ public class HologramEntity extends Entity {
             }
         }
 
-        // Воспроизведение постоянного звука работы - КАСТОМНЫЙ ЗВУК
-        // Звук воспроизводится бесшовно сразу после появления
+        // Воспроизведение ambient sound с безопасной проверкой
         if (isAmbientSoundPlaying && currentProgress >= 1.0F && isAppearing()) {
             ambientSoundTimer++;
             if (ambientSoundTimer >= AMBIENT_SOUND_INTERVAL) {
-                playHologramSound(ModSounds.HOLOGRAM_AMBIENT.get(), 0.12F); // Еще тише
+                SoundEvent ambientSound = HologramConfig.getHologramAmbientSound();
+                if (ambientSound == null) {
+                    // Fallback на стандартный ambient sound
+                    ambientSound = getSafeSoundEvent(ModSounds.HOLOGRAM_AMBIENT);
+                }
+
+                if (ambientSound != null) {
+                    playHologramSound(ambientSound, 0.12F);
+                }
                 ambientSoundTimer = 0;
             }
         } else if (!isAppearing()) {
-            // Если голограмма начинает исчезать, останавливаем эмбиент-звук
             isAmbientSoundPlaying = false;
             ambientSoundTimer = 0;
         }
+    }
 
-        // Периодически обновляем текстуру из конфига (раз в секунду)
-        if (this.tickCount % 20 == 0) {
-            setTextureFromConfig();
+    private void updateFlickerEffect() {
+        flickerTimer++;
+        if (flickerTimer >= FLICKER_INTERVAL) {
+            flickerIntensity = (float) (Math.random() * 0.1f);
+            flickerTimer = 0;
         }
+    }
+
+    public float getFlickerIntensity() {
+        return flickerIntensity;
     }
 }

@@ -1,7 +1,9 @@
 // ClientEventHandlers.java
 package com.example.storytell.init.network;
 
+import com.example.storytell.init.world.WorldModelManager;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -13,7 +15,7 @@ public class ClientEventHandlers {
 
     public static void handleRedSky(boolean activate, int duration) {
         if (activate) {
-            redSkyDuration = duration * 20; // Конвертируем секунды в тики
+            redSkyDuration = duration * 20;
             redSkyStartTime = System.currentTimeMillis();
         } else {
             redSkyDuration = 0;
@@ -24,10 +26,6 @@ public class ClientEventHandlers {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END && redSkyDuration > 0) {
             redSkyDuration--;
-
-            if (redSkyDuration <= 0) {
-                redSkyDuration = 0;
-            }
         }
     }
 
@@ -40,12 +38,26 @@ public class ClientEventHandlers {
         long currentTime = System.currentTimeMillis();
         float progress = (currentTime - redSkyStartTime) / 1000.0f;
 
-        // Плавное появление и исчезание
         if (progress < 2.0f) {
-            return progress / 2.0f; // Плавное появление за 2 секунды
+            return progress / 2.0f;
         } else if (progress > 58.0f) {
-            return Math.max(0.0f, (60.0f - progress) / 2.0f); // Плавное исчезание за 2 секунды
+            return Math.max(0.0f, (60.0f - progress) / 2.0f);
         }
         return 1.0f;
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+            var poseStack = event.getPoseStack();
+            var camera = event.getCamera();
+            double cameraX = camera.getPosition().x;
+            double cameraY = camera.getPosition().y;
+            double cameraZ = camera.getPosition().z;
+
+            poseStack.pushPose();
+            WorldModelManager.renderAll(poseStack, event.getPartialTick(), cameraX, cameraY, cameraZ);
+            poseStack.popPose();
+        }
     }
 }

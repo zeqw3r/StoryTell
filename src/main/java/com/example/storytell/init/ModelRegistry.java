@@ -14,6 +14,6 @@ public class ModelRegistry {
     public static void onModelRegistry(ModelEvent.RegisterAdditional event) {
         // Register our custom models
         event.register(new ResourceLocation("storytell:star/blue_star"));
-        System.out.println("Registered custom star model: storytell:star/blue_star");
+        event.register(new ResourceLocation("storytell:star/meteor"));
     }
 }

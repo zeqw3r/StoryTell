@@ -1,3 +1,4 @@
+// UpgradeTransmitterRenderer.java
 package com.example.storytell.init.blocks;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -19,41 +20,49 @@ public class UpgradeTransmitterRenderer implements BlockEntityRenderer<UpgradeTr
         poseStack.pushPose();
         poseStack.translate(0.5, 1.2, 0.5);
 
+        // Используем полупрозрачные линии для эффекта голограммы
         VertexConsumer builder = buffer.getBuffer(RenderType.LINES);
 
         // Простой куб над блоком
         float size = 0.3f;
 
+        // Цвет с полупрозрачностью для эффекта голограммы
+        int r = 255;
+        int g = 255;
+        int b = 255;
+        int alpha = 255; // Полупрозрачность
+
         // Нижняя плоскость
-        addLine(builder, poseStack, -size, 0, -size, size, 0, -size);
-        addLine(builder, poseStack, size, 0, -size, size, 0, size);
-        addLine(builder, poseStack, size, 0, size, -size, 0, size);
-        addLine(builder, poseStack, -size, 0, size, -size, 0, -size);
+        addLine(builder, poseStack, -size, 0, -size, size, 0, -size, r, g, b, alpha);
+        addLine(builder, poseStack, size, 0, -size, size, 0, size, r, g, b, alpha);
+        addLine(builder, poseStack, size, 0, size, -size, 0, size, r, g, b, alpha);
+        addLine(builder, poseStack, -size, 0, size, -size, 0, -size, r, g, b, alpha);
 
         // Верхняя плоскость
-        addLine(builder, poseStack, -size, size, -size, size, size, -size);
-        addLine(builder, poseStack, size, size, -size, size, size, size);
-        addLine(builder, poseStack, size, size, size, -size, size, size);
-        addLine(builder, poseStack, -size, size, size, -size, size, -size);
+        addLine(builder, poseStack, -size, size, -size, size, size, -size, r, g, b, alpha);
+        addLine(builder, poseStack, size, size, -size, size, size, size, r, g, b, alpha);
+        addLine(builder, poseStack, size, size, size, -size, size, size, r, g, b, alpha);
+        addLine(builder, poseStack, -size, size, size, -size, size, -size, r, g, b, alpha);
 
         // Вертикальные линии
-        addLine(builder, poseStack, -size, 0, -size, -size, size, -size);
-        addLine(builder, poseStack, size, 0, -size, size, size, -size);
-        addLine(builder, poseStack, size, 0, size, size, size, size);
-        addLine(builder, poseStack, -size, 0, size, -size, size, size);
+        addLine(builder, poseStack, -size, 0, -size, -size, size, -size, r, g, b, alpha);
+        addLine(builder, poseStack, size, 0, -size, size, size, -size, r, g, b, alpha);
+        addLine(builder, poseStack, size, 0, size, size, size, size, r, g, b, alpha);
+        addLine(builder, poseStack, -size, 0, size, -size, size, size, r, g, b, alpha);
 
         poseStack.popPose();
     }
 
     private void addLine(VertexConsumer builder, PoseStack poseStack,
                          float x1, float y1, float z1,
-                         float x2, float y2, float z2) {
+                         float x2, float y2, float z2,
+                         int r, int g, int b, int alpha) {
         builder.vertex(poseStack.last().pose(), x1, y1, z1)
-                .color(0, 255, 255, 180)
+                .color(r, g, b, alpha)
                 .normal(0, 1, 0)
                 .endVertex();
         builder.vertex(poseStack.last().pose(), x2, y2, z2)
-                .color(0, 255, 255, 180)
+                .color(r, g, b, alpha)
                 .normal(0, 1, 0)
                 .endVertex();
     }

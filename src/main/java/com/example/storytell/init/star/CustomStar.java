@@ -6,8 +6,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import org.joml.Matrix4f;
@@ -37,12 +37,17 @@ public class CustomStar {
     private final float pulseSpeed;
     private final float pulseAmount;
 
+    // Visibility properties
+    private boolean visible;
+    private boolean wasVisibleBeforeHiding;
+    private final boolean defaultVisible;
+
     // Modifiers
     private final List<StarModifierManager.StarModifier> activeModifiers = new ArrayList<>();
 
     public CustomStar(String name, String modelPath, float size, int color,
                       float rightAscension, float declination, float distance,
-                      float rotationSpeed, float pulseSpeed, float pulseAmount) {
+                      float rotationSpeed, float pulseSpeed, float pulseAmount, boolean defaultVisible) {
         this.name = name;
         this.modelLocation = new ResourceLocation("storytell", modelPath);
         this.size = size;
@@ -53,15 +58,44 @@ public class CustomStar {
         this.rotationSpeed = rotationSpeed;
         this.pulseSpeed = pulseSpeed;
         this.pulseAmount = pulseAmount;
+        this.defaultVisible = defaultVisible;
 
         calculatePosition();
         // Store base position
         this.baseX = x;
         this.baseY = y;
         this.baseZ = z;
+
+        // Загружаем сохраненную видимость из конфига, если есть
+        Boolean savedVisibility = com.example.storytell.init.HologramConfig.getStarVisibility(name);
+        if (savedVisibility != null) {
+            this.visible = savedVisibility;
+        } else {
+            this.visible = defaultVisible;
+            // Сохраняем видимость по умолчанию в конфиг
+            com.example.storytell.init.HologramConfig.setStarVisibility(name, defaultVisible);
+        }
+
+        this.wasVisibleBeforeHiding = this.visible;
+
+        // Сохраняем настройки звезды в конфиг
+        saveStarSettings();
+    }
+
+    // Конструктор для обратной совместимости - по умолчанию видимая
+    public CustomStar(String name, String modelPath, float size, int color,
+                      float rightAscension, float declination, float distance,
+                      float rotationSpeed, float pulseSpeed, float pulseAmount) {
+        this(name, modelPath, size, color, rightAscension, declination, distance,
+                rotationSpeed, pulseSpeed, pulseAmount, true);
     }
 
     public void render(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
+        // Check visibility - if star is hidden, don't render
+        if (!visible) {
+            return;
+        }
+
         // Update animation and apply modifiers
         updateAnimation(partialTick);
         updatePositionWithModifiers();
@@ -127,7 +161,15 @@ public class CustomStar {
         // Apply all active modifiers
         List<StarModifierManager.StarModifier> modifiers = StarModifierManager.getModifiers(name);
         for (StarModifierManager.StarModifier modifier : modifiers) {
-            if (modifier.getType().equals("offset")) {
+            if (modifier.isSmoothMove() && modifier.getType().equals("smooth_move")) {
+                // Применяем плавное перемещение с интерполяцией
+                float progress = modifier.getProgress();
+                float easedProgress = calculateEasing(progress, modifier.getEasingType());
+
+                this.x = modifier.getStartX() + (modifier.getTargetX() - modifier.getStartX()) * easedProgress;
+                this.y = modifier.getStartY() + (modifier.getTargetY() - modifier.getStartY()) * easedProgress;
+                this.z = modifier.getStartZ() + (modifier.getTargetZ() - modifier.getStartZ()) * easedProgress;
+            } else if (modifier.getType().equals("offset")) {
                 // Apply offset to all coordinates
                 this.x += modifier.getX();
                 this.y += modifier.getY();
@@ -143,8 +185,105 @@ public class CustomStar {
         this.activeModifiers.addAll(modifiers);
     }
 
+    // Вычисление easing функции в зависимости от типа
+    private float calculateEasing(float progress, String easingType) {
+        switch (easingType) {
+            case "easeInCubic":
+                return easeInCubic(progress);
+            case "easeOutCubic":
+                return easeOutCubic(progress);
+            case "easeInOutCubic":
+                return easeInOutCubic(progress);
+            case "easeInExpo":
+                return easeInExpo(progress);
+            case "easeOutExpo":
+                return easeOutExpo(progress);
+            case "easeInBack":
+                return easeInBack(progress);
+            case "easeOutBack":
+                return easeOutBack(progress);
+            case "easeInElastic":
+                return easeInElastic(progress);
+            case "easeOutElastic":
+                return easeOutElastic(progress);
+            case "linear":
+            default:
+                return progress;
+        }
+    }
+
+    // Функции плавности (easing functions)
+
+    // Линейная (по умолчанию)
+    private float linear(float x) {
+        return x;
+    }
+
+    // Кубическое ускорение (начинается медленно, затем ускоряется)
+    private float easeInCubic(float x) {
+        return x * x * x;
+    }
+
+    // Кубическое замедление (начинается быстро, затем замедляется)
+    private float easeOutCubic(float x) {
+        return (float) (1 - Math.pow(1 - x, 3));
+    }
+
+    // Кубическое ускорение и замедление
+    private float easeInOutCubic(float x) {
+        return x < 0.5 ? 4 * x * x * x : 1 - (float)Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+    // Экспоненциальное ускорение (очень медленное начало, быстрое ускорение)
+    private float easeInExpo(float x) {
+        return x == 0 ? 0 : (float)Math.pow(2, 10 * x - 10);
+    }
+
+    // Экспоненциальное замедление (быстрое начало, очень медленный конец)
+    private float easeOutExpo(float x) {
+        return x == 1 ? 1 : 1 - (float)Math.pow(2, -10 * x);
+    }
+
+    // Эффект отскока в начале
+    private float easeInBack(float x) {
+        float c1 = 1.70158f;
+        float c3 = c1 + 1;
+        return c3 * x * x * x - c1 * x * x;
+    }
+
+    // Эффект отскока в конце
+    private float easeOutBack(float x) {
+        float c1 = 1.70158f;
+        float c3 = c1 + 1;
+        return 1 + c3 * (float)Math.pow(x - 1, 3) + c1 * (float)Math.pow(x - 1, 2);
+    }
+
+    // Эластичный эффект в начале
+    private float easeInElastic(float x) {
+        float c4 = (2 * (float)Math.PI) / 3;
+        return x == 0 ? 0 : x == 1 ? 1 :
+                -(float)Math.pow(2, 10 * x - 10) * (float)Math.sin((x * 10 - 10.75) * c4);
+    }
+
+    // Эластичный эффект в конце
+    private float easeOutElastic(float x) {
+        float c4 = (2 * (float)Math.PI) / 3;
+        return x == 0 ? 0 : x == 1 ? 1 :
+                (float)Math.pow(2, -10 * x) * (float)Math.sin((x * 10 - 0.75) * c4) + 1;
+    }
+
     public void applyPositionModifier(String type, float x, float y, float z, int duration, Runnable onExpire) {
         StarModifierManager.StarModifier modifier = new StarModifierManager.StarModifier(type, x, y, z, duration, onExpire);
+        StarModifierManager.addModifier(name, modifier);
+        updatePositionWithModifiers();
+    }
+
+    // Новый метод для плавного перемещения с выбором типа easing
+    public void applySmoothMovement(float startX, float startY, float startZ,
+                                    float targetX, float targetY, float targetZ,
+                                    int duration, Runnable onExpire, String easingType) {
+        StarModifierManager.StarModifier modifier = new StarModifierManager.StarModifier(
+                "smooth_move", startX, startY, startZ, targetX, targetY, targetZ, duration, onExpire, easingType);
         StarModifierManager.addModifier(name, modifier);
         updatePositionWithModifiers();
     }
@@ -154,6 +293,59 @@ public class CustomStar {
         this.y = baseY;
         this.z = baseZ;
         StarModifierManager.removeModifiers(name);
+    }
+
+    // Visibility methods
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+        if (!visible) {
+            this.wasVisibleBeforeHiding = this.visible;
+        }
+        // Сохраняем в конфиг
+        com.example.storytell.init.HologramConfig.setStarVisibility(name, visible);
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void toggleVisibility() {
+        this.visible = !this.visible;
+        if (!visible) {
+            this.wasVisibleBeforeHiding = this.visible;
+        }
+        // Сохраняем в конфиг
+        com.example.storytell.init.HologramConfig.setStarVisibility(name, visible);
+    }
+
+    public void restoreVisibility() {
+        this.visible = this.wasVisibleBeforeHiding;
+        com.example.storytell.init.HologramConfig.setStarVisibility(name, visible);
+    }
+
+    public void resetToDefaultVisibility() {
+        this.visible = this.defaultVisible;
+        this.wasVisibleBeforeHiding = this.defaultVisible;
+        // Сохраняем в конфиг
+        com.example.storytell.init.HologramConfig.setStarVisibility(name, defaultVisible);
+    }
+
+    public boolean getDefaultVisible() {
+        return defaultVisible;
+    }
+
+    // Сохранение настроек звезды в конфиг
+    private void saveStarSettings() {
+        com.example.storytell.init.HologramConfig.StarSettings settings =
+                new com.example.storytell.init.HologramConfig.StarSettings(
+                        visible, baseX, baseY, baseZ, rightAscension, declination, distance
+                );
+        com.example.storytell.init.HologramConfig.setStarSettings(name, settings);
+    }
+
+    // Удаление звезды из конфига
+    public void removeFromConfig() {
+        com.example.storytell.init.HologramConfig.removeStar(name);
     }
 
     private boolean renderJsonModel(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize,

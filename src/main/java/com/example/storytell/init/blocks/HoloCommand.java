@@ -3,16 +3,14 @@ package com.example.storytell.init.blocks;
 
 import com.example.storytell.init.HologramConfig;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.server.level.ServerLevel;
 
 public class HoloCommand {
-
-
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         // Команда /sethologram <texture>
@@ -36,13 +34,8 @@ public class HoloCommand {
                                             count++;
                                         }
                                     }
-                                    final int finalCount = count;
-                                    ctx.getSource().sendSuccess(() ->
-                                            Component.literal("Updated texture for " + finalCount + " holograms to: " + texture), true);
-                                    return finalCount;
+                                    return count;
                                 }
-                            } else {
-                                ctx.getSource().sendFailure(Component.literal("Failed to set hologram texture. Invalid texture path: " + texture));
                             }
                             return 0;
                         })));
@@ -59,10 +52,7 @@ public class HoloCommand {
                                 count++;
                             }
                         }
-                        final int finalCount = count;
-                        ctx.getSource().sendSuccess(() ->
-                                Component.literal("Found " + finalCount + " holograms in this dimension"), false);
-                        return finalCount;
+                        return count;
                     }
                     return 0;
                 })
@@ -77,12 +67,29 @@ public class HoloCommand {
                                         count++;
                                     }
                                 }
-                                final int finalCount = count;
-                                ctx.getSource().sendSuccess(() ->
-                                        Component.literal("Removed " + finalCount + " holograms"), true);
-                                return finalCount;
+                                return count;
                             }
                             return 0;
+                        }))
+                // Команда для управления необходимостью энергии
+                .then(Commands.literal("energy")
+                        .then(Commands.argument("required", BoolArgumentType.bool())
+                                .executes(ctx -> {
+                                    boolean required = BoolArgumentType.getBool(ctx, "required");
+                                    HologramConfig.setEnergyRequired(required);
+                                    return 1;
+                                })))
+                // Команда для блокировки переключения голограмм
+                .then(Commands.literal("lock")
+                        .executes(ctx -> {
+                            HologramConfig.setHologramLocked(true);
+                            return 1;
+                        }))
+                // Команда для разблокировки переключения голограмм
+                .then(Commands.literal("unlock")
+                        .executes(ctx -> {
+                            HologramConfig.setHologramLocked(false);
+                            return 1;
                         }))
         );
     }

@@ -41,6 +41,18 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> EVENT1 =
             registerSoundEvent("event1");
 
+    public static final RegistryObject<SoundEvent> EVENT2 =
+            registerSoundEvent("event2");
+
+    public static final RegistryObject<SoundEvent> EVENT3 =
+            registerSoundEvent("event3");
+    public static final RegistryObject<SoundEvent> EVENT4 =
+            registerSoundEvent("event4");
+    public static final RegistryObject<SoundEvent> EVENT6 =
+            registerSoundEvent("event6");
+    public static final RegistryObject<SoundEvent> TABLET1 =
+            registerSoundEvent("tablet1");
+
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation location = new ResourceLocation("storytell", name);
         return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(location));

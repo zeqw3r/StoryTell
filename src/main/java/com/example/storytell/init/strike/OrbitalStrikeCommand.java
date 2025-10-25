@@ -101,7 +101,7 @@ public class OrbitalStrikeCommand {
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
 
         // Выполняем команду screenshake для цели
-        String command = "screenshake " + target.getGameProfile().getName() + " 10 60";
+        String command = "screenshake " + target.getGameProfile().getName() + " 1.1 60";
         target.getServer().getCommands().performPrefixedCommand(
                 target.getServer().createCommandSourceStack().withSuppressedOutput(),
                 command

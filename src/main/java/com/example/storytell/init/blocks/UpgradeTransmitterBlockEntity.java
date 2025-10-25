@@ -1,6 +1,7 @@
-// UpgradeTransmitterBlockEntity.java (исправленная версия)
+// UpgradeTransmitterBlockEntity.java
 package com.example.storytell.init.blocks;
 
+import com.example.storytell.init.HologramConfig;
 import com.example.storytell.init.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -14,6 +15,7 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -21,11 +23,16 @@ import java.util.UUID;
 
 public class UpgradeTransmitterBlockEntity extends BlockEntity {
 
-    private static final int ENERGY_PER_TICK = 20;
+    private static final int ENERGY_PER_TICK = 400;
     private UUID hologramUUID = null;
     private boolean hasEnergy = false;
     private int energyStored = 0;
     private static final int MAX_ENERGY = ENERGY_PER_TICK * 100;
+
+    // Поля для управления сменой голограммы
+    private boolean isChangingTexture = false;
+    private String pendingTexture = "";
+    private int changeCooldown = 0;
 
     public UpgradeTransmitterBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.UPGRADE_TRANSMITTER_BLOCK_ENTITY_TYPE.get(), pos, state);
@@ -39,18 +46,45 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
     public void tickServer() {
         if (this.level == null || this.level.isClientSide) return;
 
-        LazyOptional<IEnergyStorage> capability = this.getCapability(ForgeCapabilities.ENERGY, null);
-        if (capability.isPresent()) {
-            IEnergyStorage energy = capability.orElse(null);
-            if (energy != null) {
-                if (energy.getEnergyStored() >= ENERGY_PER_TICK) {
-                    energy.extractEnergy(ENERGY_PER_TICK, false);
-                    hasEnergy = true;
-                    energyStored = energy.getEnergyStored();
-                    spawnOrUpdateHologram();
+        // Обработка смены текстуры
+        if (isChangingTexture) {
+            if (changeCooldown > 0) {
+                changeCooldown--;
+                return;
+            } else {
+                HologramConfig.setHologramTexture(pendingTexture);
+                isChangingTexture = false;
+                pendingTexture = "";
+
+                if ((hasEnergy && energyStored >= ENERGY_PER_TICK) || !HologramConfig.isEnergyRequired()) {
+                    spawnNewHologram();
+                }
+            }
+        }
+
+        boolean energyRequired = HologramConfig.isEnergyRequired();
+
+        if (energyRequired) {
+            LazyOptional<IEnergyStorage> capability = this.getCapability(ForgeCapabilities.ENERGY, null);
+            if (capability.isPresent()) {
+                IEnergyStorage energy = capability.orElse(null);
+                if (energy != null) {
+                    if (energy.getEnergyStored() >= ENERGY_PER_TICK) {
+                        energy.extractEnergy(ENERGY_PER_TICK, false);
+                        hasEnergy = true;
+                        energyStored = energy.getEnergyStored();
+
+                        if (!isChangingTexture) {
+                            spawnOrUpdateHologram();
+                        }
+                    } else {
+                        hasEnergy = false;
+                        energyStored = energy.getEnergyStored();
+                        startHologramDisappearing();
+                    }
                 } else {
                     hasEnergy = false;
-                    energyStored = energy.getEnergyStored();
+                    energyStored = 0;
                     startHologramDisappearing();
                 }
             } else {
@@ -59,14 +93,20 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
                 startHologramDisappearing();
             }
         } else {
-            hasEnergy = false;
-            energyStored = 0;
-            startHologramDisappearing();
+            hasEnergy = true;
+            energyStored = MAX_ENERGY;
+
+            if (!isChangingTexture) {
+                spawnOrUpdateHologram();
+            }
         }
     }
 
     private void spawnOrUpdateHologram() {
-        if (!hasEnergy || energyStored < ENERGY_PER_TICK) {
+        boolean canShowHologram = HologramConfig.isEnergyRequired() ?
+                (hasEnergy && energyStored >= ENERGY_PER_TICK) : true;
+
+        if (!canShowHologram) {
             startHologramDisappearing();
             return;
         }
@@ -78,22 +118,31 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         if (hologramUUID != null) {
             Entity existing = server.getEntity(hologramUUID);
             if (existing != null && existing.isAlive()) {
-                // Голограмма уже существует
                 return;
             } else {
-                // Сущность больше не существует, сбрасываем UUID
                 hologramUUID = null;
             }
         }
 
-        // Создаём новую голограмму - ИСПРАВЛЕННАЯ СТРОКА
-        HologramEntity holo = new HologramEntity(ModEntities.HOLOGRAM_ENTITY.get(), level);
-        BlockPos pos = getBlockPos();
-        holo.moveTo(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 0.0F, 0.0F);
+        spawnNewHologram();
+    }
 
-        server.addFreshEntity(holo);
-        hologramUUID = holo.getUUID();
-        setChanged();
+    private void spawnNewHologram() {
+        if (this.level == null || this.level.isClientSide) return;
+        if (!(this.level instanceof ServerLevel)) return;
+        ServerLevel server = (ServerLevel) this.level;
+
+        try {
+            HologramEntity holo = new HologramEntity(ModEntities.HOLOGRAM_ENTITY.get(), level);
+            BlockPos pos = getBlockPos();
+            holo.moveTo(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 0.0F, 0.0F);
+
+            server.addFreshEntity(holo);
+            hologramUUID = holo.getUUID();
+            setChanged();
+        } catch (Exception e) {
+            System.err.println("Failed to spawn hologram: " + e.getMessage());
+        }
     }
 
     private void startHologramDisappearing() {
@@ -125,7 +174,10 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
     }
 
     public boolean isShowingHologram() {
-        return hasEnergy && hologramUUID != null && energyStored >= ENERGY_PER_TICK;
+        boolean energyCondition = HologramConfig.isEnergyRequired() ?
+                (hasEnergy && energyStored >= ENERGY_PER_TICK) : true;
+
+        return energyCondition && hologramUUID != null && !isChangingTexture;
     }
 
     @Override
@@ -146,6 +198,9 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         }
         hasEnergy = tag.getBoolean("HasEnergy");
         energyStored = tag.getInt("EnergyStored");
+        isChangingTexture = tag.getBoolean("IsChangingTexture");
+        pendingTexture = tag.getString("PendingTexture");
+        changeCooldown = tag.getInt("ChangeCooldown");
     }
 
     @Override
@@ -156,6 +211,42 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         }
         tag.putBoolean("HasEnergy", hasEnergy);
         tag.putInt("EnergyStored", energyStored);
+        tag.putBoolean("IsChangingTexture", isChangingTexture);
+        tag.putString("PendingTexture", pendingTexture);
+        tag.putInt("ChangeCooldown", changeCooldown);
+    }
+
+    public void processCommand(String command) {
+        if (this.level == null || this.level.isClientSide) return;
+
+        if (HologramConfig.isHologramLocked()) {
+            return;
+        }
+
+        ResourceLocation newTexture = HologramManager.processCommand(command);
+
+        if (newTexture != null) {
+            String texturePath = newTexture.toString();
+            startTextureChange(texturePath);
+        }
+    }
+
+    private void startTextureChange(String newTexture) {
+        this.isChangingTexture = true;
+        this.pendingTexture = newTexture;
+        startHologramDisappearingForAll();
+        this.changeCooldown = 30;
+        setChanged();
+    }
+
+    private void startHologramDisappearingForAll() {
+        if (this.level instanceof ServerLevel serverLevel) {
+            for (Entity e : serverLevel.getAllEntities()) {
+                if (e instanceof HologramEntity) {
+                    ((HologramEntity) e).startDisappearing();
+                }
+            }
+        }
     }
 
     private final LazyOptional<IEnergyStorage> energyHandler = LazyOptional.of(() -> new IEnergyStorage() {
@@ -171,6 +262,10 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
 
         @Override
         public int extractEnergy(int maxExtract, boolean simulate) {
+            if (!HologramConfig.isEnergyRequired()) {
+                return Math.min(maxExtract, ENERGY_PER_TICK);
+            }
+
             int energyExtracted = Math.min(energyStored, Math.min(maxExtract, ENERGY_PER_TICK));
             if (!simulate) {
                 energyStored -= energyExtracted;

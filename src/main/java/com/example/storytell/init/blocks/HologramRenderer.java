@@ -44,16 +44,29 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
         poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
 
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(textureLocation));
+        // Используем полупрозрачный RenderType с поддержкой альфа-канала
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(textureLocation));
         PoseStack.Pose pose = poseStack.last();
 
         float halfWidth = width / 2.0f;
         float halfHeight = height / 2.0f;
 
-        int alpha = (int)(255 * animationProgress);
+        // Устанавливаем полупрозрачность (альфа-канал)
+        int alpha = (int)(255 * animationProgress); // Максимум 200 из 255 для полупрозрачности
+        int baseColor = 0xFFFFFF; // Белый цвет для минимального искажения текстуры
+
+        // Добавляем голубоватый оттенок для эффекта голограммы
+        int r = (baseColor >> 16) & 0xFF;
+        int g = (baseColor >> 8) & 0xFF;
+        int b = baseColor & 0xFF;
+
+        // Слегка смещаем цвет в сторону голубого
+        r = Math.min(255, (int)(r * 0.9f));
+        g = Math.min(255, (int)(g * 1.0f));
+        b = Math.min(255, (int)(b * 1.1f));
 
         vertexConsumer.vertex(pose.pose(), -halfWidth, -halfHeight, 0.0F)
-                .color(255, 255, 255, alpha)
+                .color(r, g, b, alpha)
                 .uv(0.0F, 1.0F)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(packedLight)
@@ -61,7 +74,7 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
                 .endVertex();
 
         vertexConsumer.vertex(pose.pose(), halfWidth, -halfHeight, 0.0F)
-                .color(255, 255, 255, alpha)
+                .color(r, g, b, alpha)
                 .uv(1.0F, 1.0F)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(packedLight)
@@ -69,7 +82,7 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
                 .endVertex();
 
         vertexConsumer.vertex(pose.pose(), halfWidth, halfHeight, 0.0F)
-                .color(255, 255, 255, alpha)
+                .color(r, g, b, alpha)
                 .uv(1.0F, 0.0F)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(packedLight)
@@ -77,7 +90,7 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
                 .endVertex();
 
         vertexConsumer.vertex(pose.pose(), -halfWidth, halfHeight, 0.0F)
-                .color(255, 255, 255, alpha)
+                .color(r, g, b, alpha)
                 .uv(0.0F, 0.0F)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(packedLight)

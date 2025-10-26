@@ -1,0 +1,11 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "storytell:font/sftransrobotics_oblique.ttf",
+      "shift": [0, 0],
+      "size": 11,
+      "oversample": 3.0
+    }
+  ]
+}

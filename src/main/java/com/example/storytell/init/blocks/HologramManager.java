@@ -8,7 +8,7 @@ import java.util.Map;
 public class HologramManager {
 
     // Карта сопоставления ключевых слов/фраз с текстурами
-    private static final Map<String, ResourceLocation> TEXTURE_MAPPINGS = new HashMap<>();
+    private static final Map<String, String> TEXTURE_MAPPINGS = new HashMap<>();
 
     static {
         // Инициализация сопоставлений
@@ -17,22 +17,22 @@ public class HologramManager {
 
     private static void initializeMappings() {
         // Русские команды
-        TEXTURE_MAPPINGS.put("кто вы", new ResourceLocation("storytell", "textures/entity/whoareyou.png"));
-        TEXTURE_MAPPINGS.put("спутник", new ResourceLocation("storytell", "textures/entity/satellite.png"));
-        TEXTURE_MAPPINGS.put("обьекст в небе", new ResourceLocation("storytell", "textures/entity/satellite.png"));
-        TEXTURE_MAPPINGS.put("монстр", new ResourceLocation("storytell", "textures/entity/monster.png"));
-        TEXTURE_MAPPINGS.put("босс", new ResourceLocation("storytell", "textures/entity/monster.png"));
-        TEXTURE_MAPPINGS.put("привет", new ResourceLocation("storytell", "textures/entity/hello.png"));
-        TEXTURE_MAPPINGS.put("помогите", new ResourceLocation("storytell", "textures/entity/help.png"));
-        TEXTURE_MAPPINGS.put("конец", new ResourceLocation("storytell", "textures/entity/end.png"));
-        TEXTURE_MAPPINGS.put("колапс", new ResourceLocation("storytell", "textures/entity/end.png"));
-        TEXTURE_MAPPINGS.put("апокал", new ResourceLocation("storytell", "textures/entity/end.png"));
+        TEXTURE_MAPPINGS.put("кто вы", "Зубенко Михаил Петрович");
+        TEXTURE_MAPPINGS.put("спутник", "Спутник - устройства слежки за остатками живых существ. Будьте аккуратны, неизвестно когда они решат действовать");
+        TEXTURE_MAPPINGS.put("обьекст в небе", "Спутник - устройства слежки за остатками живых существ. Будьте аккуратны, неизвестно когда они решат действовать");
+        TEXTURE_MAPPINGS.put("монстр", "Они оружие, созданное для уничтожения остатков человечества");
+        TEXTURE_MAPPINGS.put("босс", "Они оружие, созданное для уничтожения остатков человечества");
+        TEXTURE_MAPPINGS.put("привет", "Здравствуйте");
+        TEXTURE_MAPPINGS.put("помогите", "Мы не можем еще сильнее помочь вам. Наши возможности ограничены");
+        TEXTURE_MAPPINGS.put("конец", "Конец человечества произошел из-за взрыва реактора. он дестабилизировал ядро и вызвал коллапс");
+        TEXTURE_MAPPINGS.put("колапс", "Конец человечества произошел из-за взрыва реактора. он дестабилизировал ядро и вызвал коллапс");
+        TEXTURE_MAPPINGS.put("апокал", "Конец человечества произошел из-за взрыва реактора. он дестабилизировал ядро и вызвал коллапс");
     }
 
     /**
      * Обрабатывает команду и возвращает соответствующую текстуру
      */
-    public static ResourceLocation processCommand(String command) {
+    public static String processCommand(String command) {
         String lowerCommand = command.toLowerCase().trim();
 
         // 1. Точное совпадение
@@ -41,7 +41,7 @@ public class HologramManager {
         }
 
         // 2. Частичное совпадение - ищем ключевые слова в команде
-        for (Map.Entry<String, ResourceLocation> entry : TEXTURE_MAPPINGS.entrySet()) {
+        for (Map.Entry<String, String> entry : TEXTURE_MAPPINGS.entrySet()) {
             if (lowerCommand.contains(entry.getKey())) {
                 return entry.getValue();
             }
@@ -54,14 +54,14 @@ public class HologramManager {
     /**
      * Добавляет новое сопоставление (можно использовать для динамического добавления команд)
      */
-    public static void addMapping(String command, ResourceLocation texture) {
-        TEXTURE_MAPPINGS.put(command.toLowerCase(), texture);
+    public static void addMapping(String command, String text) {
+        TEXTURE_MAPPINGS.put(command.toLowerCase(), text);
     }
 
     /**
      * Возвращает все доступные сопоставления
      */
-    public static Map<String, ResourceLocation> getAllMappings() {
+    public static Map<String, String> getAllMappings() {
         return new HashMap<>(TEXTURE_MAPPINGS);
     }
 }

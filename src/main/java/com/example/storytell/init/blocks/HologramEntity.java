@@ -25,6 +25,8 @@ public class HologramEntity extends Entity {
 
     private static final EntityDataAccessor<String> DATA_TEXTURE =
             SynchedEntityData.defineId(HologramEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> DATA_DISPLAY_TEXT =
+            SynchedEntityData.defineId(HologramEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> DATA_ANIMATION_PROGRESS =
             SynchedEntityData.defineId(HologramEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_IS_APPEARING =
@@ -60,6 +62,7 @@ public class HologramEntity extends Entity {
     @Override
     protected void defineSynchedData() {
         this.entityData.define(DATA_TEXTURE, HologramConfig.getHologramTexture().toString());
+        this.entityData.define(DATA_DISPLAY_TEXT, HologramConfig.getHologramText());
         this.entityData.define(DATA_ANIMATION_PROGRESS, 0.0F);
         this.entityData.define(DATA_IS_APPEARING, true);
         this.entityData.define(DATA_VERTICAL_OFFSET, VERTICAL_TRAVEL_DISTANCE);
@@ -72,11 +75,17 @@ public class HologramEntity extends Entity {
         } else {
             setTextureFromConfig();
         }
+        if (compound.contains("Text")) {
+            setDisplayText(compound.getString("Text"));
+        } else {
+            setTextFromConfig();
+        }
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag compound) {
         compound.putString("Texture", this.entityData.get(DATA_TEXTURE));
+        compound.putString("Text", this.entityData.get(DATA_DISPLAY_TEXT));
     }
 
     @Override
@@ -116,6 +125,18 @@ public class HologramEntity extends Entity {
 
     public void setTextureFromConfig() {
         setTexture(HologramConfig.getHologramTexture());
+    }
+
+    public void setDisplayText(String text) {
+        this.entityData.set(DATA_DISPLAY_TEXT, text);
+    }
+
+    public void setTextFromConfig() {
+        setDisplayText(HologramConfig.getHologramText());
+    }
+
+    public String getDisplayText() {
+        return this.entityData.get(DATA_DISPLAY_TEXT);
     }
 
     public float getAnimationProgress() {

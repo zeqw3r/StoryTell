@@ -1,6 +1,7 @@
 // HologramConfig.java
 package com.example.storytell.init;
 
+import com.example.storytell.StoryTell;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -28,6 +29,7 @@ public class HologramConfig {
     private static class ConfigData {
         // Основная текстура голограммы
         String hologramTexture = "storytell:textures/entity/default_hologram.png";
+        String hologramText = "";
 
         // Звуки
         String radioSound = "storytell:radio_static";
@@ -172,6 +174,13 @@ public class HologramConfig {
         return new ResourceLocation(configData.hologramTexture);
     }
 
+    public static String getHologramText() {
+        if (!initialized) {
+            init();
+        }
+        return configData.hologramText;
+    }
+
     public static boolean setHologramTexture(String texturePath) {
         if (!initialized) {
             init();
@@ -180,6 +189,20 @@ public class HologramConfig {
             // Проверяем валидность пути текстуры
             new ResourceLocation(texturePath);
             configData.hologramTexture = texturePath;
+            saveConfig();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean setHologramText(String text) {
+        if (!initialized) {
+            init();
+        }
+        try {
+            configData.hologramText = text;
+
             saveConfig();
             return true;
         } catch (Exception e) {

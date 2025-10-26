@@ -4,13 +4,22 @@ package com.example.storytell.init.blocks;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.font.FontManager;
+import net.minecraft.client.gui.font.FontSet;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import com.mojang.math.Axis;
+import net.minecraft.util.FormattedCharSequence;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class HologramRenderer extends EntityRenderer<HologramEntity> {
 
@@ -96,6 +105,50 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
                 .uv2(packedLight)
                 .normal(pose.normal(), 0.0F, 1.0F, 0.0F)
                 .endVertex();
+
+        Minecraft mc = Minecraft.getInstance();
+        FontManager manager = new FontManager(mc.getTextureManager());
+        ResourceLocation fontLoc = new ResourceLocation("storytell", "sftransrobotics_oblique");
+        Map<ResourceLocation, ResourceLocation> renames = new HashMap<>();
+        renames.put(
+                new ResourceLocation("minecraft", "default"), fontLoc
+        );
+        manager.setRenames(renames);
+        Font font = manager.createFont();
+        String text = entity.getDisplayText();
+        if (text != null && !text.isEmpty()) {
+            poseStack.pushPose();
+
+            poseStack.translate(0.0F, 0.0F, 0.01F);
+            float textScale = 0.023F;
+            poseStack.scale(-textScale, -textScale, textScale);
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+
+            Component comp = Component.literal(text);
+            List<FormattedCharSequence> lines = font.split(comp, 100); // 100 пикселей ширина
+            float y = (float) (font.lineHeight * lines.toArray().length) / -2;
+            for (FormattedCharSequence line : lines) {
+                float textWidth = font.width(line) / 2.0F;
+
+                // Рисуем
+                font.drawInBatch(
+                        line,
+                        -textWidth,
+                        y,
+                        0xFFFFFF, // голубоватый цвет под голограмму
+                        false,     // без тени
+                        poseStack.last().pose(),
+                        bufferSource,
+                        Font.DisplayMode.NORMAL,
+                        0,
+                        packedLight
+                );
+                y += font.lineHeight;
+            }
+
+
+            poseStack.popPose();
+        }
 
         poseStack.popPose();
     }

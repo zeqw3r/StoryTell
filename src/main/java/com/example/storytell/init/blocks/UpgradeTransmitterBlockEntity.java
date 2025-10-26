@@ -15,7 +15,6 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,8 +29,8 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
     private static final int MAX_ENERGY = ENERGY_PER_TICK * 100;
 
     // Поля для управления сменой голограммы
-    private boolean isChangingTexture = false;
-    private String pendingTexture = "";
+    private boolean isChangingText = false;
+    private String pendingText = "";
     private int changeCooldown = 0;
 
     public UpgradeTransmitterBlockEntity(BlockPos pos, BlockState state) {
@@ -47,14 +46,15 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         if (this.level == null || this.level.isClientSide) return;
 
         // Обработка смены текстуры
-        if (isChangingTexture) {
+        if (isChangingText) {
             if (changeCooldown > 0) {
                 changeCooldown--;
                 return;
             } else {
-                HologramConfig.setHologramTexture(pendingTexture);
-                isChangingTexture = false;
-                pendingTexture = "";
+                HologramConfig.setHologramText(pendingText);
+                HologramConfig.setHologramTexture("storytell:textures/entity/default.png");
+                isChangingText = false;
+                pendingText = "";
 
                 if ((hasEnergy && energyStored >= ENERGY_PER_TICK) || !HologramConfig.isEnergyRequired()) {
                     spawnNewHologram();
@@ -74,7 +74,7 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
                         hasEnergy = true;
                         energyStored = energy.getEnergyStored();
 
-                        if (!isChangingTexture) {
+                        if (!isChangingText) {
                             spawnOrUpdateHologram();
                         }
                     } else {
@@ -96,15 +96,14 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
             hasEnergy = true;
             energyStored = MAX_ENERGY;
 
-            if (!isChangingTexture) {
+            if (!isChangingText) {
                 spawnOrUpdateHologram();
             }
         }
     }
 
     private void spawnOrUpdateHologram() {
-        boolean canShowHologram = HologramConfig.isEnergyRequired() ?
-                (hasEnergy && energyStored >= ENERGY_PER_TICK) : true;
+        boolean canShowHologram = !HologramConfig.isEnergyRequired() || (hasEnergy && energyStored >= ENERGY_PER_TICK);
 
         if (!canShowHologram) {
             startHologramDisappearing();
@@ -177,7 +176,7 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         boolean energyCondition = HologramConfig.isEnergyRequired() ?
                 (hasEnergy && energyStored >= ENERGY_PER_TICK) : true;
 
-        return energyCondition && hologramUUID != null && !isChangingTexture;
+        return energyCondition && hologramUUID != null && !isChangingText;
     }
 
     @Override
@@ -198,8 +197,8 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         }
         hasEnergy = tag.getBoolean("HasEnergy");
         energyStored = tag.getInt("EnergyStored");
-        isChangingTexture = tag.getBoolean("IsChangingTexture");
-        pendingTexture = tag.getString("PendingTexture");
+        isChangingText = tag.getBoolean("IsChangingTexture");
+        pendingText = tag.getString("PendingText");
         changeCooldown = tag.getInt("ChangeCooldown");
     }
 
@@ -211,8 +210,8 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
         }
         tag.putBoolean("HasEnergy", hasEnergy);
         tag.putInt("EnergyStored", energyStored);
-        tag.putBoolean("IsChangingTexture", isChangingTexture);
-        tag.putString("PendingTexture", pendingTexture);
+        tag.putBoolean("IsChangingTexture", isChangingText);
+        tag.putString("PendingText", pendingText);
         tag.putInt("ChangeCooldown", changeCooldown);
     }
 
@@ -223,17 +222,16 @@ public class UpgradeTransmitterBlockEntity extends BlockEntity {
             return;
         }
 
-        ResourceLocation newTexture = HologramManager.processCommand(command);
+        String textResponse = HologramManager.processCommand(command);
 
-        if (newTexture != null) {
-            String texturePath = newTexture.toString();
-            startTextureChange(texturePath);
+        if (textResponse != null) {
+            startTextChange(textResponse);
         }
     }
 
-    private void startTextureChange(String newTexture) {
-        this.isChangingTexture = true;
-        this.pendingTexture = newTexture;
+    private void startTextChange(String newText) {
+        this.isChangingText = true;
+        this.pendingText = newText;
         startHologramDisappearingForAll();
         this.changeCooldown = 30;
         setChanged();

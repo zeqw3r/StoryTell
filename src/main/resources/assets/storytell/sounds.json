@@ -88,5 +88,47 @@
     "sounds": [
       "storytell:event6"
     ]
+  },
+  "event8": {
+    "subtitle": "subtitles.storytell.event8",
+    "sounds": [
+      "storytell:event8"
+    ]
+  },
+  "event9": {
+    "subtitle": "subtitles.storytell.event9",
+    "sounds": [
+      "storytell:event9"
+    ]
+  },
+  "radio_1": {
+    "subtitle": "subtitles.storytell.radio_1",
+    "sounds": [
+      "storytell:radio_1"
+    ]
+  },
+  "radio_2": {
+    "subtitle": "subtitles.storytell.radio_2",
+    "sounds": [
+      "storytell:radio_2"
+    ]
+  },
+  "radio_3": {
+    "subtitle": "subtitles.storytell.radio_3",
+    "sounds": [
+      "storytell:radio_3"
+    ]
+  },
+  "radio_4": {
+    "subtitle": "subtitles.storytell.radio_4",
+    "sounds": [
+      "storytell:radio_4"
+    ]
+  },
+  "music_2": {
+    "subtitle": "subtitles.storytell.music_2",
+    "sounds": [
+      "storytell:music_2"
+    ]
   }
 }

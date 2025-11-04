@@ -93,6 +93,10 @@ public class StoryTell {
         Event5Command.register(event.getDispatcher());
         Event6Command.register(event.getDispatcher());
         Event7Command.register(event.getDispatcher());
+        Event8Command.register(event.getDispatcher());
+        Event9Command.register(event.getDispatcher());
+        Event10Command.register(event.getDispatcher());
+        Event11Command.register(event.getDispatcher());
         TabletCommand.register(event.getDispatcher());
     }
 }

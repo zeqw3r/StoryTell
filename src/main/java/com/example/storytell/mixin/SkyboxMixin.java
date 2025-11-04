@@ -25,6 +25,9 @@ public class SkyboxMixin {
         // Initialize star manager if not already done
         StarManager.init();
 
+        // Update star animations
+        StarManager.updateStars(partialTick);
+
         // Get the custom stars from manager
         var stars = StarManager.getStars();
         if (stars.isEmpty()) return;

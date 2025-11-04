@@ -20,7 +20,7 @@ public class CustomStar {
     private final String name;
     private final ResourceLocation modelLocation;
     private final float size;
-    private final int color;
+    private int color; // Убрали final
 
     // Celestial coordinates
     private final float rightAscension;
@@ -45,6 +45,17 @@ public class CustomStar {
     // Modifiers
     private final List<StarModifierManager.StarModifier> activeModifiers = new ArrayList<>();
 
+    // Pulsation animation fields
+    private float pulseTime = 0.0f;
+    private float currentAnimatedSize;
+
+    // Color animation fields
+    private int startColor;
+    private int targetColor;
+    private int colorAnimationDuration;
+    private int colorAnimationProgress;
+    private boolean isColorAnimating = false;
+
     public CustomStar(String name, String modelPath, float size, int color,
                       float rightAscension, float declination, float distance,
                       float rotationSpeed, float pulseSpeed, float pulseAmount, boolean defaultVisible) {
@@ -59,6 +70,7 @@ public class CustomStar {
         this.pulseSpeed = pulseSpeed;
         this.pulseAmount = pulseAmount;
         this.defaultVisible = defaultVisible;
+        this.currentAnimatedSize = size;
 
         calculatePosition();
         // Store base position
@@ -72,17 +84,14 @@ public class CustomStar {
             this.visible = savedVisibility;
         } else {
             this.visible = defaultVisible;
-            // Сохраняем видимость по умолчанию в конфиг
             com.example.storytell.init.HologramConfig.setStarVisibility(name, defaultVisible);
         }
 
         this.wasVisibleBeforeHiding = this.visible;
-
-        // Сохраняем настройки звезды в конфиг
         saveStarSettings();
     }
 
-    // Конструктор для обратной совместимости - по умолчанию видимая
+    // Конструктор для обратной совместимости
     public CustomStar(String name, String modelPath, float size, int color,
                       float rightAscension, float declination, float distance,
                       float rotationSpeed, float pulseSpeed, float pulseAmount) {
@@ -90,17 +99,20 @@ public class CustomStar {
                 rotationSpeed, pulseSpeed, pulseAmount, true);
     }
 
+    public void update(float deltaTime, float partialTick) {
+        if (!visible) return;
+
+        updateAnimation(deltaTime);
+        updatePulsation(deltaTime);
+        updatePositionWithModifiers();
+        updateColorAnimation();
+    }
+
     public void render(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
-        // Check visibility - if star is hidden, don't render
         if (!visible) {
             return;
         }
 
-        // Update animation and apply modifiers
-        updateAnimation(partialTick);
-        updatePositionWithModifiers();
-
-        // Setup rendering
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(false);
@@ -109,28 +121,26 @@ public class CustomStar {
 
         // Apply transformations
         poseStack.translate(x, y, z);
-
-        // Individual star rotation
         poseStack.mulPose(new Quaternionf().rotationZ((float) Math.toRadians(rotationAngle)));
 
-        // Calculate pulse effect
-        float pulse = 1.0f + (float)Math.sin(System.currentTimeMillis() * 0.001f * pulseSpeed) * pulseAmount;
-        float currentSize = size * pulse;
-
-        // Apply color tint
+        // Extract color components
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
         float a = ((color >> 24) & 0xFF) / 255.0f;
+        if (a == 0) a = 1.0f; // Ensure visibility if alpha is 0
+
+        // Set shader color - это важно для применения цвета
+        RenderSystem.setShaderColor(r, g, b, a);
 
         // Try to render the model, fallback to quad if needed
-        if (!renderJsonModel(poseStack, currentSize, r, g, b, a)) {
-            renderFallbackQuad(poseStack, currentSize, r, g, b, a);
+        if (!renderJsonModel(poseStack, currentAnimatedSize)) {
+            renderFallbackQuad(poseStack, currentAnimatedSize);
         }
 
         poseStack.popPose();
 
-        // Reset color and cleanup
+        // Reset color
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
@@ -145,24 +155,77 @@ public class CustomStar {
         this.z = (float) (distance * Math.cos(decRad) * Math.sin(raRad));
     }
 
-    private void updateAnimation(float partialTick) {
-        rotationAngle += rotationSpeed * partialTick;
+    private void updateAnimation(float deltaTime) {
+        rotationAngle += rotationSpeed * deltaTime * 50.0f;
         if (rotationAngle >= 360.0f) {
             rotationAngle -= 360.0f;
         }
     }
 
+    private void updatePulsation(float deltaTime) {
+        pulseTime += deltaTime * pulseSpeed;
+        float sineValue = (float) Math.sin(pulseTime * 2 * Math.PI);
+        float easedPulse = easeInOutSine(sineValue);
+
+        float minSize = size * (1.0f - pulseAmount);
+        float maxSize = size * (1.0f + pulseAmount);
+        currentAnimatedSize = minSize + (maxSize - minSize) * ((easedPulse + 1.0f) / 2.0f);
+        currentAnimatedSize = Math.max(1.0f, currentAnimatedSize);
+    }
+
+    private void updateColorAnimation() {
+        if (isColorAnimating && colorAnimationProgress < colorAnimationDuration) {
+            colorAnimationProgress++;
+
+            float progress = (float) colorAnimationProgress / colorAnimationDuration;
+            float easedProgress = easeInOutCubic(progress);
+
+            // Интерполяция между начальным и целевым цветом
+            int interpolatedColor = interpolateColor(startColor, targetColor, easedProgress);
+            this.color = interpolatedColor;
+
+            if (colorAnimationProgress >= colorAnimationDuration) {
+                this.color = targetColor;
+                isColorAnimating = false;
+            }
+        }
+    }
+
+    private int interpolateColor(int startColor, int targetColor, float progress) {
+        int startR = (startColor >> 16) & 0xFF;
+        int startG = (startColor >> 8) & 0xFF;
+        int startB = startColor & 0xFF;
+        int startA = (startColor >> 24) & 0xFF;
+
+        int targetR = (targetColor >> 16) & 0xFF;
+        int targetG = (targetColor >> 8) & 0xFF;
+        int targetB = targetColor & 0xFF;
+        int targetA = (targetColor >> 24) & 0xFF;
+
+        int r = (int) (startR + (targetR - startR) * progress);
+        int g = (int) (startG + (targetG - startG) * progress);
+        int b = (int) (startB + (targetB - startB) * progress);
+        int a = (int) (startA + (targetA - startA) * progress);
+
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    private float easeInOutSine(float x) {
+        return (float) (-(Math.cos(Math.PI * x) - 1) / 2);
+    }
+
+    private float easeInOutCubic(float x) {
+        return x < 0.5 ? 4 * x * x * x : 1 - (float)Math.pow(-2 * x + 2, 3) / 2;
+    }
+
     private void updatePositionWithModifiers() {
-        // Reset to base position
         this.x = baseX;
         this.y = baseY;
         this.z = baseZ;
 
-        // Apply all active modifiers
         List<StarModifierManager.StarModifier> modifiers = StarModifierManager.getModifiers(name);
         for (StarModifierManager.StarModifier modifier : modifiers) {
             if (modifier.isSmoothMove() && modifier.getType().equals("smooth_move")) {
-                // Применяем плавное перемещение с интерполяцией
                 float progress = modifier.getProgress();
                 float easedProgress = calculateEasing(progress, modifier.getEasingType());
 
@@ -170,102 +233,59 @@ public class CustomStar {
                 this.y = modifier.getStartY() + (modifier.getTargetY() - modifier.getStartY()) * easedProgress;
                 this.z = modifier.getStartZ() + (modifier.getTargetZ() - modifier.getStartZ()) * easedProgress;
             } else if (modifier.getType().equals("offset")) {
-                // Apply offset to all coordinates
                 this.x += modifier.getX();
                 this.y += modifier.getY();
                 this.z += modifier.getZ();
             } else if (modifier.getType().equals("player_position")) {
-                // For player-relative positioning
                 this.y = modifier.getY();
             }
         }
 
-        // Update local list
         this.activeModifiers.clear();
         this.activeModifiers.addAll(modifiers);
     }
 
-    // Вычисление easing функции в зависимости от типа
     private float calculateEasing(float progress, String easingType) {
         switch (easingType) {
-            case "easeInCubic":
-                return easeInCubic(progress);
-            case "easeOutCubic":
-                return easeOutCubic(progress);
-            case "easeInOutCubic":
-                return easeInOutCubic(progress);
-            case "easeInExpo":
-                return easeInExpo(progress);
-            case "easeOutExpo":
-                return easeOutExpo(progress);
-            case "easeInBack":
-                return easeInBack(progress);
-            case "easeOutBack":
-                return easeOutBack(progress);
-            case "easeInElastic":
-                return easeInElastic(progress);
-            case "easeOutElastic":
-                return easeOutElastic(progress);
+            case "easeInCubic": return easeInCubic(progress);
+            case "easeOutCubic": return easeOutCubic(progress);
+            case "easeInOutCubic": return easeInOutCubic(progress);
+            case "easeInExpo": return easeInExpo(progress);
+            case "easeOutExpo": return easeOutExpo(progress);
+            case "easeInBack": return easeInBack(progress);
+            case "easeOutBack": return easeOutBack(progress);
+            case "easeInElastic": return easeInElastic(progress);
+            case "easeOutElastic": return easeOutElastic(progress);
             case "linear":
-            default:
-                return progress;
+            default: return progress;
         }
     }
 
-    // Функции плавности (easing functions)
-
-    // Линейная (по умолчанию)
-    private float linear(float x) {
-        return x;
-    }
-
-    // Кубическое ускорение (начинается медленно, затем ускоряется)
-    private float easeInCubic(float x) {
-        return x * x * x;
-    }
-
-    // Кубическое замедление (начинается быстро, затем замедляется)
-    private float easeOutCubic(float x) {
-        return (float) (1 - Math.pow(1 - x, 3));
-    }
-
-    // Кубическое ускорение и замедление
-    private float easeInOutCubic(float x) {
-        return x < 0.5 ? 4 * x * x * x : 1 - (float)Math.pow(-2 * x + 2, 3) / 2;
-    }
-
-    // Экспоненциальное ускорение (очень медленное начало, быстрое ускорение)
+    // Easing functions
+    private float linear(float x) { return x; }
+    private float easeInCubic(float x) { return x * x * x; }
+    private float easeOutCubic(float x) { return (float) (1 - Math.pow(1 - x, 3)); }
     private float easeInExpo(float x) {
         return x == 0 ? 0 : (float)Math.pow(2, 10 * x - 10);
     }
-
-    // Экспоненциальное замедление (быстрое начало, очень медленный конец)
     private float easeOutExpo(float x) {
         return x == 1 ? 1 : 1 - (float)Math.pow(2, -10 * x);
     }
-
-    // Эффект отскока в начале
     private float easeInBack(float x) {
         float c1 = 1.70158f;
         float c3 = c1 + 1;
         return c3 * x * x * x - c1 * x * x;
     }
-
-    // Эффект отскока в конце
     private float easeOutBack(float x) {
         float c1 = 1.70158f;
         float c3 = c1 + 1;
         return 1 + c3 * (float)Math.pow(x - 1, 3) + c1 * (float)Math.pow(x - 1, 2);
     }
-
-    // Эластичный эффект в начале
     private float easeInElastic(float x) {
         float c4 = (2 * (float)Math.PI) / 3;
         return x == 0 ? 0 : x == 1 ? 1 :
                 -(float)Math.pow(2, 10 * x - 10) * (float)Math.sin((x * 10 - 10.75) * c4);
     }
-
-    // Эластичный эффект в конце
     private float easeOutElastic(float x) {
         float c4 = (2 * (float)Math.PI) / 3;
         return x == 0 ? 0 : x == 1 ? 1 :
@@ -278,7 +298,6 @@ public class CustomStar {
         updatePositionWithModifiers();
     }
 
-    // Новый метод для плавного перемещения с выбором типа easing
     public void applySmoothMovement(float startX, float startY, float startZ,
                                     float targetX, float targetY, float targetZ,
                                     int duration, Runnable onExpire, String easingType) {
@@ -286,6 +305,15 @@ public class CustomStar {
                 "smooth_move", startX, startY, startZ, targetX, targetY, targetZ, duration, onExpire, easingType);
         StarModifierManager.addModifier(name, modifier);
         updatePositionWithModifiers();
+    }
+
+    // Новый метод для плавного изменения цвета
+    public void startColorAnimation(int targetColor, int durationTicks) {
+        this.startColor = this.color;
+        this.targetColor = targetColor;
+        this.colorAnimationDuration = durationTicks;
+        this.colorAnimationProgress = 0;
+        this.isColorAnimating = true;
     }
 
     public void resetToBasePosition() {
@@ -301,7 +329,6 @@ public class CustomStar {
         if (!visible) {
             this.wasVisibleBeforeHiding = this.visible;
         }
-        // Сохраняем в конфиг
         com.example.storytell.init.HologramConfig.setStarVisibility(name, visible);
     }
 
@@ -314,7 +341,6 @@ public class CustomStar {
         if (!visible) {
             this.wasVisibleBeforeHiding = this.visible;
         }
-        // Сохраняем в конфиг
         com.example.storytell.init.HologramConfig.setStarVisibility(name, visible);
     }
 
@@ -326,7 +352,6 @@ public class CustomStar {
     public void resetToDefaultVisibility() {
         this.visible = this.defaultVisible;
         this.wasVisibleBeforeHiding = this.defaultVisible;
-        // Сохраняем в конфиг
         com.example.storytell.init.HologramConfig.setStarVisibility(name, defaultVisible);
     }
 
@@ -334,7 +359,6 @@ public class CustomStar {
         return defaultVisible;
     }
 
-    // Сохранение настроек звезды в конфиг
     private void saveStarSettings() {
         com.example.storytell.init.HologramConfig.StarSettings settings =
                 new com.example.storytell.init.HologramConfig.StarSettings(
@@ -343,13 +367,12 @@ public class CustomStar {
         com.example.storytell.init.HologramConfig.setStarSettings(name, settings);
     }
 
-    // Удаление звезды из конфига
     public void removeFromConfig() {
         com.example.storytell.init.HologramConfig.removeStar(name);
     }
 
-    private boolean renderJsonModel(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize,
-                                    float r, float g, float b, float a) {
+    // Измененный метод рендеринга модели - убраны параметры цвета
+    private boolean renderJsonModel(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize) {
         try {
             BakedModel model = Minecraft.getInstance().getModelManager().getModel(modelLocation);
 
@@ -358,7 +381,7 @@ public class CustomStar {
                 return false;
             }
 
-            // Setup rendering - use block atlas
+            // Setup rendering
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
 
@@ -368,7 +391,7 @@ public class CustomStar {
             poseStack.scale(scale, scale, scale);
             poseStack.translate(-0.5f, -0.5f, -0.5f);
 
-            // Render the model
+            // Render the model - цвет теперь применяется через RenderSystem.setShaderColor
             Tesselator tesselator = Tesselator.getInstance();
             BufferBuilder bufferBuilder = tesselator.getBuilder();
             bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
@@ -386,9 +409,10 @@ public class CustomStar {
                     float u = Float.intBitsToFloat(vertices[i * 8 + 4]);
                     float v = Float.intBitsToFloat(vertices[i * 8 + 5]);
 
+                    // Цвет теперь берется из текущего состояния RenderSystem
                     bufferBuilder.vertex(poseStack.last().pose(), x, y, z)
                             .uv(u, v)
-                            .color(r, g, b, a)
+                            .color(1.0f, 1.0f, 1.0f, 1.0f) // Белый цвет, чтобы не перезаписывать установленный шейдером
                             .endVertex();
                 }
             }
@@ -404,8 +428,8 @@ public class CustomStar {
         }
     }
 
-    private void renderFallbackQuad(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize,
-                                    float r, float g, float b, float a) {
+    // Измененный метод рендеринга fallback quad - убраны параметры цвета
+    private void renderFallbackQuad(com.mojang.blaze3d.vertex.PoseStack poseStack, float currentSize) {
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder bufferBuilder = tesselator.getBuilder();
 
@@ -414,13 +438,23 @@ public class CustomStar {
         Matrix4f matrix = poseStack.last().pose();
         float halfSize = currentSize / 2.0f;
 
-        // Build simple quad
-        bufferBuilder.vertex(matrix, -halfSize, -halfSize, 0).uv(0.0f, 0.0f).color(r, g, b, a).endVertex();
-        bufferBuilder.vertex(matrix, -halfSize, halfSize, 0).uv(0.0f, 1.0f).color(r, g, b, a).endVertex();
-        bufferBuilder.vertex(matrix, halfSize, halfSize, 0).uv(1.0f, 1.0f).color(r, g, b, a).endVertex();
-        bufferBuilder.vertex(matrix, halfSize, -halfSize, 0).uv(1.0f, 0.0f).color(r, g, b, a).endVertex();
+        // Build simple quad - цвет применяется через шейдер
+        bufferBuilder.vertex(matrix, -halfSize, -halfSize, 0).uv(0.0f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+        bufferBuilder.vertex(matrix, -halfSize, halfSize, 0).uv(0.0f, 1.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+        bufferBuilder.vertex(matrix, halfSize, halfSize, 0).uv(1.0f, 1.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
+        bufferBuilder.vertex(matrix, halfSize, -halfSize, 0).uv(1.0f, 0.0f).color(1.0f, 1.0f, 1.0f, 1.0f).endVertex();
 
         BufferUploader.drawWithShader(bufferBuilder.end());
+    }
+
+    // Методы для изменения цвета
+    public void setColor(int newColor) {
+        this.color = newColor;
+        this.isColorAnimating = false; // Останавливаем анимацию при прямом изменении цвета
+    }
+
+    public int getColor() {
+        return color;
     }
 
     // Getters

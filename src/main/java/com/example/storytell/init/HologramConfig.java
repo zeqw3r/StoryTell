@@ -1,7 +1,6 @@
 // HologramConfig.java
 package com.example.storytell.init;
 
-import com.example.storytell.StoryTell;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -25,49 +24,40 @@ public class HologramConfig {
     private static boolean initialized = false;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    // Внутренний класс для хранения всех конфигурационных данных
+    // Клиентские поля для хранения данных
+    private static String clientHologramTexture = "storytell:textures/entity/default_hologram.png";
+    private static String clientHologramText = "";
+    private static String clientHologramAmbientSound = "storytell:hologram_ambient";
+    private static boolean clientHologramLocked = false;
+    private static boolean clientTextMode = false;
+
+    // Внутренний класс для хранения конфигурационных данных
     private static class ConfigData {
-        // Основная текстура голограммы
         String hologramTexture = "storytell:textures/entity/default_hologram.png";
         String hologramText = "";
+        boolean textMode = false;
 
-        // Звуки
         String radioSound = "storytell:radio_static";
-        String hologramAmbientSound = "storytell:hologram_ambient"; // Добавлено поле для ambient sound
+        String hologramAmbientSound = "storytell:hologram_ambient";
 
-        // Настройки спавна
         boolean repoSpawnEnabled = true;
-
-        // Настройки энергии для голограмм
         boolean energyRequired = true;
-
-        // Блокировка переключения голограмм через сообщения
         boolean hologramLocked = false;
 
-        // Список боссов
         List<String> bossList = new ArrayList<>(Arrays.asList(
-                "fdbosses:chesed",
-                "fdbosses:malkuth",
-                "cataclysm:scylla",
-                "cataclysm:maledictus",
-                "cataclysm:ancient_remnant",
-                "cataclysm:ender_guardian",
-                "cataclysm:the_leviathan",
-                "cataclysm:the_harbinger",
-                "cataclysm:ignis",
-                "cataclysm:netherite_monstrosity"
+                "fdbosses:chesed", "fdbosses:malkuth", "cataclysm:scylla", "cataclysm:maledictus",
+                "cataclysm:ancient_remnant", "cataclysm:ender_guardian", "cataclysm:the_leviathan",
+                "cataclysm:the_harbinger", "cataclysm:ignis", "cataclysm:netherite_monstrosity",
+                "minecraft:ender_dragon", "minecraft:wither"
         ));
 
-        // Система игроков
         Set<String> seenPlayers = new HashSet<>();
         Set<String> pendingPlayers = new HashSet<>();
 
-        // Система звезд
         Map<String, Boolean> starVisibility = new HashMap<>();
         Map<String, StarSettings> starSettings = new HashMap<>();
     }
 
-    // Класс для хранения настроек звезды
     public static class StarSettings {
         public boolean visible;
         public float baseX;
@@ -78,7 +68,6 @@ public class HologramConfig {
         public float distance;
 
         public StarSettings() {}
-
         public StarSettings(boolean visible, float baseX, float baseY, float baseZ,
                             float rightAscension, float declination, float distance) {
             this.visible = visible;
@@ -106,7 +95,6 @@ public class HologramConfig {
                 configData = GSON.fromJson(json, ConfigData.class);
                 initializeDefaults();
             } else {
-                // Создаем файл с настройками по умолчанию
                 configData = new ConfigData();
                 initializeDefaults();
                 saveConfig();
@@ -116,138 +104,141 @@ public class HologramConfig {
             initializeDefaults();
         }
 
+        clientHologramTexture = configData.hologramTexture;
+        clientHologramText = configData.hologramText;
+        clientHologramAmbientSound = configData.hologramAmbientSound;
+        clientHologramLocked = configData.hologramLocked;
+        clientTextMode = configData.textMode;
+
         initialized = true;
     }
 
     private static void initializeDefaults() {
-        // Инициализируем карты, если они null
-        if (configData.starVisibility == null) {
-            configData.starVisibility = new HashMap<>();
-        }
-        if (configData.starSettings == null) {
-            configData.starSettings = new HashMap<>();
-        }
-        if (configData.pendingPlayers == null) {
-            configData.pendingPlayers = new HashSet<>();
-        }
-        if (configData.hologramAmbientSound == null) {
-            configData.hologramAmbientSound = "storytell:hologram_ambient";
-        }
+        if (configData.starVisibility == null) configData.starVisibility = new HashMap<>();
+        if (configData.starSettings == null) configData.starSettings = new HashMap<>();
+        if (configData.pendingPlayers == null) configData.pendingPlayers = new HashSet<>();
+        if (configData.hologramAmbientSound == null) configData.hologramAmbientSound = "storytell:hologram_ambient";
+        if (configData.hologramText == null) configData.hologramText = "";
     }
 
     private static void saveConfig() {
         try {
             Path configDir = Paths.get("config", "storytell");
-            if (!Files.exists(configDir)) {
-                Files.createDirectories(configDir);
-            }
-
+            if (!Files.exists(configDir)) Files.createDirectories(configDir);
             Path configFile = configDir.resolve(CONFIG_FILE_NAME);
             String json = GSON.toJson(configData);
             Files.writeString(configFile, json);
-        } catch (Exception e) {
-            // Без сообщений об ошибках
-        }
+        } catch (Exception e) {}
     }
 
-    // Методы для управления блокировкой голограмм
+    // Геттеры и сеттеры
+    public static boolean isTextMode() {
+        if (!initialized) init();
+        return configData.textMode;
+    }
+
+    public static void setTextMode(boolean textMode) {
+        if (!initialized) init();
+        configData.textMode = textMode;
+        clientTextMode = textMode;
+        saveConfig();
+    }
+
+    public static boolean isTextModeClient() { return clientTextMode; }
+    public static void setTextModeClient(boolean textMode) { clientTextMode = textMode; }
+
     public static boolean isHologramLocked() {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         return configData.hologramLocked;
     }
 
     public static void setHologramLocked(boolean locked) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         configData.hologramLocked = locked;
+        clientHologramLocked = locked;
         saveConfig();
     }
 
-    // Методы для голограмм
+    public static void setHologramLockedClient(boolean locked) { clientHologramLocked = locked; }
+    public static boolean isHologramLockedClient() { return clientHologramLocked; }
+
     public static ResourceLocation getHologramTexture() {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         return new ResourceLocation(configData.hologramTexture);
     }
 
     public static String getHologramText() {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         return configData.hologramText;
     }
 
     public static boolean setHologramTexture(String texturePath) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         try {
-            // Проверяем валидность пути текстуры
             new ResourceLocation(texturePath);
             configData.hologramTexture = texturePath;
+            clientHologramTexture = texturePath;
+            configData.textMode = false;
+            clientTextMode = false;
             saveConfig();
             return true;
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
 
     public static boolean setHologramText(String text) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         try {
             configData.hologramText = text;
-
+            clientHologramText = text;
+            configData.textMode = true;
+            clientTextMode = true;
             saveConfig();
             return true;
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
 
-    // Методы для боссов
+    public static void setHologramTextureClient(String texturePath) {
+        try {
+            new ResourceLocation(texturePath);
+            clientHologramTexture = texturePath;
+            clientTextMode = false;
+        } catch (Exception e) {}
+    }
+
+    public static void setHologramTextClient(String text) {
+        clientHologramText = text;
+        clientTextMode = true;
+    }
+
+    public static ResourceLocation getHologramTextureClient() { return new ResourceLocation(clientHologramTexture); }
+    public static String getHologramTextClient() { return clientHologramText; }
+
+    // Остальные методы остаются без изменений (только геттеры/сеттеры)
     public static List<String> getBossList() {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         return new ArrayList<>(configData.bossList);
     }
 
     public static boolean isBoss(ResourceLocation entityId) {
-        if (!initialized) {
-            init();
-        }
-        String entityString = entityId.toString();
-        return configData.bossList.contains(entityString);
+        if (!initialized) init();
+        return configData.bossList.contains(entityId.toString());
     }
 
     public static boolean addBoss(String bossId) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         try {
-            // Проверяем валидность ResourceLocation
             new ResourceLocation(bossId);
             if (!configData.bossList.contains(bossId)) {
                 configData.bossList.add(bossId);
                 saveConfig();
                 return true;
             }
-        } catch (Exception e) {
-            // Без сообщений об ошибках
-        }
+        } catch (Exception e) {}
         return false;
     }
 
     public static boolean removeBoss(String bossId) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         if (configData.bossList.remove(bossId)) {
             saveConfig();
             return true;
@@ -256,14 +247,11 @@ public class HologramConfig {
     }
 
     public static void setBossList(List<String> newBossList) {
-        if (!initialized) {
-            init();
-        }
+        if (!initialized) init();
         configData.bossList = new ArrayList<>(newBossList);
         saveConfig();
     }
 
-    // Методы для радио
     public static String getRadioSound() {
         if (!initialized) init();
         return configData.radioSound;
@@ -272,23 +260,14 @@ public class HologramConfig {
     public static boolean setRadioSound(String sound) {
         if (!initialized) init();
         try {
-            // Убираем лишние части из пути звука
-            String cleanSound = sound;
-            if (cleanSound.contains(":")) {
-                cleanSound = cleanSound.replace("sounds/", "").replace(".ogg", "");
-            }
-
-            // Проверяем валидность пути звука
+            String cleanSound = sound.replace("sounds/", "").replace(".ogg", "");
             new ResourceLocation(cleanSound);
             configData.radioSound = cleanSound;
             saveConfig();
             return true;
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
 
-    // Методы для отслеживания игроков
     public static boolean hasPlayerSeenCutscene(String playerName) {
         if (!initialized) init();
         return configData.seenPlayers.contains(playerName.toLowerCase());
@@ -305,7 +284,6 @@ public class HologramConfig {
         return new HashSet<>(configData.seenPlayers);
     }
 
-    // Методы для ожидания подтверждения
     public static void addPendingPlayer(String playerName) {
         if (!initialized) init();
         configData.pendingPlayers.add(playerName.toLowerCase());
@@ -326,7 +304,6 @@ public class HologramConfig {
         return new HashSet<>(configData.pendingPlayers);
     }
 
-    // Методы для видимости звезд
     public static Boolean getStarVisibility(String starName) {
         if (!initialized) init();
         return configData.starVisibility.get(starName);
@@ -349,7 +326,6 @@ public class HologramConfig {
         return new HashMap<>(configData.starVisibility);
     }
 
-    // Методы для настроек звезд
     public static StarSettings getStarSettings(String starName) {
         if (!initialized) init();
         return configData.starSettings.get(starName);
@@ -372,7 +348,6 @@ public class HologramConfig {
         return new HashMap<>(configData.starSettings);
     }
 
-    // Универсальный метод для удаления всех данных о звезде
     public static void removeStar(String starName) {
         if (!initialized) init();
         configData.starVisibility.remove(starName);
@@ -380,7 +355,6 @@ public class HologramConfig {
         saveConfig();
     }
 
-    // Методы для управления спавном REPO
     public static boolean isRepoSpawnEnabled() {
         if (!initialized) init();
         return configData.repoSpawnEnabled;
@@ -392,7 +366,6 @@ public class HologramConfig {
         saveConfig();
     }
 
-    // Методы для управления энергией голограмм
     public static boolean isEnergyRequired() {
         if (!initialized) init();
         return configData.energyRequired;
@@ -404,7 +377,6 @@ public class HologramConfig {
         saveConfig();
     }
 
-    // Методы для управления ambient sound голограмм
     public static String getHologramAmbientSoundLocation() {
         if (!initialized) init();
         return configData.hologramAmbientSound;
@@ -413,33 +385,51 @@ public class HologramConfig {
     public static boolean setHologramAmbientSound(String soundLocation) {
         if (!initialized) init();
         try {
-            // Проверяем валидность пути звука
             new ResourceLocation(soundLocation);
             configData.hologramAmbientSound = soundLocation;
+            clientHologramAmbientSound = soundLocation;
             saveConfig();
             return true;
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
 
-    // Безопасный метод для получения SoundEvent
+    public static void setHologramAmbientSoundClient(String soundLocation) {
+        try {
+            new ResourceLocation(soundLocation);
+            clientHologramAmbientSound = soundLocation;
+        } catch (Exception e) {}
+    }
+
     public static SoundEvent getHologramAmbientSound() {
         try {
             String soundLocation = getHologramAmbientSoundLocation();
-            ResourceLocation soundRes = new ResourceLocation(soundLocation);
+            SoundEvent sound = net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(soundLocation));
+            return sound != null ? sound : ModSounds.HOLOGRAM_AMBIENT.get();
+        } catch (Exception e) { return ModSounds.HOLOGRAM_AMBIENT.get(); }
+    }
 
-            // Пытаемся найти звук в реестре
-            SoundEvent sound = net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS.getValue(soundRes);
-            if (sound != null) {
-                return sound;
-            }
+    public static SoundEvent getHologramAmbientSoundClient() {
+        try {
+            SoundEvent sound = net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(clientHologramAmbientSound));
+            return sound != null ? sound : ModSounds.HOLOGRAM_AMBIENT.get();
+        } catch (Exception e) { return ModSounds.HOLOGRAM_AMBIENT.get(); }
+    }
 
-            // Fallback на стандартный звук если указанный не найден
-            return ModSounds.HOLOGRAM_AMBIENT.get();
-        } catch (Exception e) {
-            // Fallback на стандартный звук при ошибке
-            return ModSounds.HOLOGRAM_AMBIENT.get();
-        }
+    public static void resetToDefaults() {
+        configData = new ConfigData();
+        initializeDefaults();
+        clientHologramTexture = configData.hologramTexture;
+        clientHologramText = configData.hologramText;
+        clientHologramAmbientSound = configData.hologramAmbientSound;
+        clientHologramLocked = configData.hologramLocked;
+        clientTextMode = configData.textMode;
+        saveConfig();
+    }
+
+    public static String getConfigSummary() {
+        if (!initialized) init();
+        return String.format("HologramConfig: texture=%s, text=%s, textMode=%s, locked=%s, ambientSound=%s",
+                configData.hologramTexture, configData.hologramText, configData.textMode,
+                configData.hologramLocked, configData.hologramAmbientSound);
     }
 }

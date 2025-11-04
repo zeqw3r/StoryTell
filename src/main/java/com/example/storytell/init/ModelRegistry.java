@@ -15,5 +15,7 @@ public class ModelRegistry {
         // Register our custom models
         event.register(new ResourceLocation("storytell:star/blue_star"));
         event.register(new ResourceLocation("storytell:star/meteor"));
+        event.register(new ResourceLocation("storytell:star/core"));
+        event.register(new ResourceLocation("storytell:star/core_2"));
     }
 }

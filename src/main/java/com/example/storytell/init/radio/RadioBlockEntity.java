@@ -15,10 +15,11 @@ public class RadioBlockEntity extends BlockEntity {
     private boolean enabled = false;
     private int soundCooldown = 0;
     private boolean isBroken = false;
+    private String currentPlayingSound = ""; // Текущий воспроизводимый звук
 
     // Интервалы воспроизведения звуков (в тиках)
-    private static final int STATIC_INTERVAL = 10; // 0.55 секунды (чуть больше длительности звука 0.53с)
-    private static final int OTHER_SOUND_INTERVAL = 1200; // 60 секунд для других звуков
+    private static final int STATIC_INTERVAL = 20; // 1 секунда для статики
+    private static final int OTHER_SOUND_INTERVAL = 6000; // 5 минут (300 секунд) для других звуков
 
     // Громкость звуков
     private static final float STATIC_VOLUME = 0.5f; // Тише обычного
@@ -47,9 +48,9 @@ public class RadioBlockEntity extends BlockEntity {
             // Устанавливаем следующий интервал в зависимости от типа звука
             String currentSound = HologramConfig.getRadioSound();
             if ("storytell:radio_static".equals(currentSound)) {
-                soundCooldown = STATIC_INTERVAL; // Непрерывное воспроизведение
+                soundCooldown = STATIC_INTERVAL; // Непрерывное воспроизведение каждую секунду
             } else {
-                soundCooldown = OTHER_SOUND_INTERVAL; // Раз в минуту
+                soundCooldown = OTHER_SOUND_INTERVAL; // Раз в 5 минут для других звуков
             }
         } else {
             soundCooldown--;
@@ -75,8 +76,6 @@ public class RadioBlockEntity extends BlockEntity {
                         soundEvent = ModSounds.RADIO_STATIC.get();
                         volume = STATIC_VOLUME; // Устанавливаем меньшую громкость для статики
                     }
-                } else if ("storytell:radio_music".equals(soundName) && ModSounds.RADIO_MUSIC != null) {
-                    soundEvent = ModSounds.RADIO_MUSIC.get();
                 }
             } else {
                 // Если звук найден в реестре, проверяем, не статический ли это
@@ -90,6 +89,7 @@ public class RadioBlockEntity extends BlockEntity {
 
         if (soundEvent != null) {
             level.playSound(null, worldPosition, soundEvent, SoundSource.RECORDS, volume, 1.0f);
+            currentPlayingSound = soundName; // Запоминаем текущий звук
         } else {
             System.err.println("Radio sound not found: " + soundName);
             // Пробуем использовать звук по умолчанию
@@ -97,11 +97,26 @@ public class RadioBlockEntity extends BlockEntity {
                 SoundEvent defaultSound = ForgeRegistries.SOUND_EVENTS.getValue(new net.minecraft.resources.ResourceLocation("storytell:radio_static"));
                 if (defaultSound != null) {
                     level.playSound(null, worldPosition, defaultSound, SoundSource.RECORDS, STATIC_VOLUME, 1.0f);
+                    currentPlayingSound = "storytell:radio_static";
                 }
             } catch (Exception e) {
                 System.err.println("Could not play default radio sound either");
             }
         }
+    }
+
+    // Метод для остановки звука
+    private void stopCurrentSound() {
+        if (level == null || level.isClientSide || currentPlayingSound.isEmpty()) return;
+
+        // Формируем и выполняем команду stopsound
+        String command = "stopsound @a * " + currentPlayingSound;
+        level.getServer().getCommands().performPrefixedCommand(
+                level.getServer().createCommandSourceStack().withSuppressedOutput().withPermission(4),
+                command
+        );
+
+        currentPlayingSound = ""; // Сбрасываем текущий звук
     }
 
     public void setEnabled(boolean enabled) {
@@ -120,6 +135,8 @@ public class RadioBlockEntity extends BlockEntity {
             } else if (!enabled && wasEnabled) {
                 // Воспроизводим звук выключения
                 level.playSound(null, worldPosition, ModSounds.RADIO_DISABLE.get(), SoundSource.RECORDS, ACTION_VOLUME, 1.0f);
+                // Останавливаем текущий звук радио
+                stopCurrentSound();
                 soundCooldown = 0;
             }
         }
@@ -137,6 +154,8 @@ public class RadioBlockEntity extends BlockEntity {
             // Если радио сломано во время работы, воспроизводим звук выключения
             if (level != null && !level.isClientSide) {
                 level.playSound(null, worldPosition, ModSounds.RADIO_DISABLE.get(), SoundSource.RECORDS, ACTION_VOLUME, 1.0f);
+                // Останавливаем текущий звук радио
+                stopCurrentSound();
             }
             enabled = false;
             soundCooldown = 0;
@@ -157,6 +176,7 @@ public class RadioBlockEntity extends BlockEntity {
         tag.putBoolean("Enabled", enabled);
         tag.putBoolean("IsBroken", isBroken);
         tag.putInt("SoundCooldown", soundCooldown);
+        tag.putString("CurrentPlayingSound", currentPlayingSound);
     }
 
     @Override
@@ -165,5 +185,6 @@ public class RadioBlockEntity extends BlockEntity {
         enabled = tag.getBoolean("Enabled");
         isBroken = tag.getBoolean("IsBroken");
         soundCooldown = tag.getInt("SoundCooldown");
+        currentPlayingSound = tag.getString("CurrentPlayingSound");
     }
 }

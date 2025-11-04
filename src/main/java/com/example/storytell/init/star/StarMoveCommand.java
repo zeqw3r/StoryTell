@@ -8,6 +8,9 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.network.PacketDistributor;
+import com.example.storytell.init.network.NetworkHandler;
+import com.example.storytell.init.network.StarMovePacket;
 
 public class StarMoveCommand {
 
@@ -36,6 +39,10 @@ public class StarMoveCommand {
 
     private static int executeStarMove(CommandSourceStack source, String starName, float offsetX, float offsetY, float offsetZ, int duration) {
         StarManager.applyStarOffset(starName, offsetX, offsetY, offsetZ, duration);
+
+        // Отправляем пакет всем клиентам
+        StarManager.sendMoveUpdate(starName, offsetX, offsetY, offsetZ, duration);
+
         source.sendSuccess(() -> Component.literal("Applied movement to star " + starName +
                 " with offset (" + offsetX + ", " + offsetY + ", " + offsetZ + ") for " + duration + " ticks"), true);
         return 1;

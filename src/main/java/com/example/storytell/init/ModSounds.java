@@ -14,8 +14,17 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> RADIO_STATIC =
             registerSoundEvent("radio_static");
 
-    public static final RegistryObject<SoundEvent> RADIO_MUSIC =
-            registerSoundEvent("radio_music");
+    public static final RegistryObject<SoundEvent> RADIO_1 =
+            registerSoundEvent("radio_1");
+
+    public static final RegistryObject<SoundEvent> RADIO_2 =
+            registerSoundEvent("radio_2");
+
+    public static final RegistryObject<SoundEvent> RADIO_3 =
+            registerSoundEvent("radio_3");
+
+    public static final RegistryObject<SoundEvent> RADIO_4 =
+            registerSoundEvent("radio_4");
 
     public static final RegistryObject<SoundEvent> RADIO_ENABLE =
             registerSoundEvent("radio_enable");
@@ -50,6 +59,10 @@ public class ModSounds {
             registerSoundEvent("event4");
     public static final RegistryObject<SoundEvent> EVENT6 =
             registerSoundEvent("event6");
+    public static final RegistryObject<SoundEvent> EVENT8 =
+            registerSoundEvent("event8");
+    public static final RegistryObject<SoundEvent> EVENT9 =
+            registerSoundEvent("event9");
     public static final RegistryObject<SoundEvent> TABLET1 =
             registerSoundEvent("tablet1");
 

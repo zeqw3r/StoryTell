@@ -5,39 +5,82 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.network.PacketDistributor;
+import com.example.storytell.init.network.NetworkHandler;
+import com.example.storytell.init.network.StarVisibilityPacket;
+import com.example.storytell.init.network.StarMovePacket;
+import com.example.storytell.init.network.StarSmoothMovePacket;
+import com.example.storytell.init.network.StarModifierPacket;
+import com.example.storytell.init.network.SyncAllStarsPacket;
+import com.example.storytell.init.network.StarColorPacket;
+import com.example.storytell.init.network.StarColorAnimationPacket;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = "storytell", bus = Mod.EventBusSubscriber.Bus.MOD)
 public class StarManager {
     private static final List<CustomStar> stars = new ArrayList<>();
     private static boolean initialized = false;
+    private static long lastUpdateTime = 0;
 
     public static void init() {
         if (initialized) return;
 
         System.out.println("Initializing custom star system with JSON models...");
 
-        // Создаем звезду, загружая настройки из конфига если есть
+        // Создаем первую звезду - blue_star
         CustomStar blueStar = new CustomStar(
                 "blue_star",
                 "star/blue_star",
                 50.0f,        // Size
-                0xFF87CEEB,  // Light blue color
+                0xFFFF0000,  // Light blue color
                 45.0f,       // Right Ascension
                 30.0f,       // Declination
                 150.0f,      // Distance
                 0.5f,        // Rotation speed
-                2.0f,        // Pulse speed
-                0.3f,        // Pulse amount
-                true         // Default visibility - visible
+                0.0f,        // Pulse speed (циклов в секунду)
+                0.3f,        // Pulse amount (30% изменения размера)
+                false         // Default visibility - HIDDEN
+        );
+
+        // Создаем вторую звезду - core с такими же параметрами
+        CustomStar coreStar = new CustomStar(
+                "core",
+                "star/core",  // Такая же модель
+                200.0f,             // Size
+                0xFF87CEEB,       // Light blue color
+                60.0f,            // Right Ascension (немного другое положение)
+                -90.0f,            // Declination
+                80.0f,           // Distance
+                3f,             // Rotation speed
+                0.0f,           // Pulse speed
+                0.4f,           // Pulse amount
+                true             // Default visibility - VISIBLE
+        );
+
+        // Создаем третью звезду - core_2 с моделью core
+        CustomStar core2Star = new CustomStar(
+                "core_2",
+                "star/core_2",       // Модель core
+                200.0f,             // Size
+                0xFFFF0000,       // Light blue color
+                60.0f,            // Right Ascension (немного другое положение)
+                -90.0f,            // Declination
+                80.0f,           // Distance
+                3f,             // Rotation speed
+                0.1f,           // Pulse speed
+                0.4f,           // Pulse amount
+                true             // Default visibility - VISIBLE
         );
 
         stars.add(blueStar);
+        stars.add(coreStar);
+        stars.add(core2Star);
 
-        // Удалена звезда meteor
-
+        lastUpdateTime = System.currentTimeMillis();
         initialized = true;
         System.out.println("Custom star system initialized with " + stars.size() + " stars");
 
@@ -46,6 +89,18 @@ public class StarManager {
                 com.example.storytell.init.HologramConfig.getStarSettings("blue_star");
         if (blueStarSettings != null) {
             System.out.println("Loaded blue_star settings from config: visible=" + blueStarSettings.visible);
+        }
+
+        com.example.storytell.init.HologramConfig.StarSettings coreStarSettings =
+                com.example.storytell.init.HologramConfig.getStarSettings("core");
+        if (coreStarSettings != null) {
+            System.out.println("Loaded core settings from config: visible=" + coreStarSettings.visible);
+        }
+
+        com.example.storytell.init.HologramConfig.StarSettings core2StarSettings =
+                com.example.storytell.init.HologramConfig.getStarSettings("core_2");
+        if (core2StarSettings != null) {
+            System.out.println("Loaded core_2 settings from config: visible=" + core2StarSettings.visible);
         }
     }
 
@@ -69,6 +124,22 @@ public class StarManager {
             }
         }
         return null;
+    }
+
+    // Оптимизированный метод для обновления анимаций только тех звезд, которые нуждаются в обновлении
+    public static void updateStars(float partialTick) {
+        if (!initialized) return;
+
+        long currentTime = System.currentTimeMillis();
+        float deltaTime = (currentTime - lastUpdateTime) / 1000.0f; // Convert to seconds
+        lastUpdateTime = currentTime;
+
+        for (CustomStar star : stars) {
+            // Обновляем только видимые звезды или звезды с активными модификаторами
+            if (star.isVisible() || !StarModifierManager.getModifiers(star.getName()).isEmpty()) {
+                star.update(deltaTime, partialTick);
+            }
+        }
     }
 
     public static void applyStarOffset(String starName, float offsetX, float offsetY, float offsetZ, int duration) {
@@ -142,11 +213,45 @@ public class StarManager {
         }
     }
 
+    // Новый метод для переключения видимости
+    public static void toggleStarVisibility(String starName) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            star.toggleVisibility();
+            System.out.println("Toggled star " + starName + " visibility to: " + star.isVisible());
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
     public static void resetStarVisibility(String starName) {
         CustomStar star = getStarByName(starName);
         if (star != null) {
             star.resetToDefaultVisibility();
             System.out.println("Reset star " + starName + " visibility to default: " + star.getDefaultVisible());
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    // Метод для изменения цвета звезды
+    public static void setStarColor(String starName, int color) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            star.setColor(color);
+            System.out.println("Set star " + starName + " color to: " + Integer.toHexString(color));
+        } else {
+            System.err.println("Star not found: " + starName);
+        }
+    }
+
+    // Новый метод для плавного изменения цвета звезды
+    public static void startStarColorAnimation(String starName, int targetColor, int durationTicks) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            star.startColorAnimation(targetColor, durationTicks);
+            System.out.println("Started color animation for star " + starName +
+                    " to color " + Integer.toHexString(targetColor) + " over " + durationTicks + " ticks");
         } else {
             System.err.println("Star not found: " + starName);
         }
@@ -164,12 +269,64 @@ public class StarManager {
         }
     }
 
-    public static void updateStars(float partialTick) {
-        if (!initialized) return;
-
-        for (CustomStar star : stars) {
-            // Future: individual star movement logic could go here
-            // Modifiers are now handled in CustomStar.render()
+    // Новый метод для применения модификаторов
+    public static void applyStarModifier(String starName, String modifierType, float x, float y, float z, int duration) {
+        CustomStar star = getStarByName(starName);
+        if (star != null) {
+            Runnable onExpire = () -> {
+                System.out.println("Modifier expired for star " + starName);
+                if ("offset".equals(modifierType)) {
+                    star.resetToBasePosition();
+                }
+            };
+            star.applyPositionModifier(modifierType, x, y, z, duration, onExpire);
+            System.out.println("Applied modifier to star " + starName + ": " + modifierType +
+                    " (" + x + ", " + y + ", " + z + ") for " + duration + " ticks");
+        } else {
+            System.err.println("Star not found: " + starName);
         }
+    }
+
+    // Метод для синхронизации всех звезд с новым игроком
+    public static void syncStarsToPlayer(ServerPlayer player) {
+        Map<String, Boolean> visibilityMap = new HashMap<>();
+        for (CustomStar star : stars) {
+            visibilityMap.put(star.getName(), star.isVisible());
+        }
+        SyncAllStarsPacket packet = new SyncAllStarsPacket(visibilityMap);
+        NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    // Методы для отправки сетевых пакетов
+    public static void sendVisibilityUpdate(String starName, boolean visible, boolean isReset, boolean isToggle) {
+        StarVisibilityPacket packet = new StarVisibilityPacket(starName, visible, isReset, isToggle);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+    }
+
+    public static void sendMoveUpdate(String starName, float offsetX, float offsetY, float offsetZ, int duration) {
+        StarMovePacket packet = new StarMovePacket(starName, offsetX, offsetY, offsetZ, duration);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+    }
+
+    public static void sendSmoothMoveUpdate(String starName, float targetX, float targetY, float targetZ, int duration, String easingType) {
+        StarSmoothMovePacket packet = new StarSmoothMovePacket(starName, targetX, targetY, targetZ, duration, easingType);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+    }
+
+    public static void sendModifierUpdate(String starName, String modifierType, float x, float y, float z, int duration) {
+        StarModifierPacket packet = new StarModifierPacket(starName, modifierType, x, y, z, duration);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+    }
+
+    // Новый метод для отправки обновления цвета
+    public static void sendColorUpdate(String starName, int color) {
+        StarColorPacket packet = new StarColorPacket(starName, color);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
+    }
+
+    // Новый метод для отправки анимации цвета
+    public static void sendColorAnimationUpdate(String starName, int targetColor, int durationTicks) {
+        StarColorAnimationPacket packet = new StarColorAnimationPacket(starName, targetColor, durationTicks);
+        NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
     }
 }

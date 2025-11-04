@@ -4,18 +4,33 @@ package com.example.storytell.init.radio;
 import com.example.storytell.init.HologramConfig;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class RadioCommand {
+    // Провайдер предложений для автодополнения звуков
+    private static final SuggestionProvider<CommandSourceStack> SOUND_SUGGESTIONS =
+            (context, builder) -> {
+                // Получаем все зарегистрированные звуки и преобразуем их в строки
+                var soundSuggestions = ForgeRegistries.SOUND_EVENTS.getKeys().stream()
+                        .map(ResourceLocation::toString)
+                        .collect(Collectors.toList());
+                return SharedSuggestionProvider.suggest(soundSuggestions, builder);
+            };
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("radio")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("setsound")
-                        .then(Commands.argument("sound", StringArgumentType.greedyString())
+                        .then(Commands.argument("sound", StringArgumentType.string())
+                                .suggests(SOUND_SUGGESTIONS) // Добавляем автодополнение
                                 .executes(context -> {
                                     String sound = StringArgumentType.getString(context, "sound");
                                     boolean success = HologramConfig.setRadioSound(sound);

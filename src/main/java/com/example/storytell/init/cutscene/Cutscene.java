@@ -1,20 +1,24 @@
-// Cutscene.java
 package com.example.storytell.init.cutscene;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
-import org.joml.Matrix4f;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class Cutscene {
-    private static final int DELAY_BETWEEN_IMAGES = 100; // 5 секунд в тиках
-    private static final int FADE_DURATION = 20; // 1 секунда для анимации
-    private static final ResourceLocation DEFAULT_BACKGROUND = new ResourceLocation("storytell", "textures/cutscene/background.png");
+    private static final Logger LOGGER = LogManager.getLogger();
+
+    private static final int DELAY_BETWEEN_IMAGES = 100;
+    private static final int FADE_DURATION = 20;
+
+    // Кэш для предотвращения повторной загрузки текстур
+    private static final List<ResourceLocation> TEXTURE_CACHE = new ArrayList<>();
+    private static final List<Boolean> TEXTURE_LOADED = new ArrayList<>();
 
     private final String folderName;
     private final List<ResourceLocation> images;
@@ -22,6 +26,7 @@ public class Cutscene {
     private int currentImageIndex;
     private int timer;
     private boolean active;
+    private boolean texturesPreloaded;
 
     public Cutscene(String folderName) {
         this.folderName = folderName;
@@ -30,39 +35,65 @@ public class Cutscene {
         this.currentImageIndex = -1;
         this.timer = 0;
         this.active = false;
+        this.texturesPreloaded = false;
         loadImages();
     }
 
     private void loadImages() {
-        String basePath = "textures/cutscene/" + folderName + "/";
+        if (texturesPreloaded) {
+            return;
+        }
 
+        String basePath = "textures/cutscene/" + folderName + "/";
         int imageNumber = 1;
+        int loadedCount = 0;
+
+        Minecraft minecraft = Minecraft.getInstance();
+
         while (true) {
             ResourceLocation imageLocation = new ResourceLocation("storytell", basePath + imageNumber + ".png");
 
+            // Проверяем кэш
+            int cacheIndex = TEXTURE_CACHE.indexOf(imageLocation);
+            if (cacheIndex != -1 && TEXTURE_LOADED.get(cacheIndex)) {
+                images.add(imageLocation);
+                imageAlphas.add(0.0f);
+                loadedCount++;
+                imageNumber++;
+                continue;
+            }
+
             try {
-                var resource = Minecraft.getInstance().getResourceManager().getResource(imageLocation);
+                var resource = minecraft.getResourceManager().getResource(imageLocation);
                 if (resource.isPresent()) {
                     images.add(imageLocation);
                     imageAlphas.add(0.0f);
-                    System.out.println("Successfully loaded cutscene image: " + imageLocation);
+
+                    // Добавляем в кэш
+                    if (cacheIndex == -1) {
+                        TEXTURE_CACHE.add(imageLocation);
+                        TEXTURE_LOADED.add(true);
+                    }
+
+                    loadedCount++;
                     imageNumber++;
                 } else {
                     break;
                 }
             } catch (Exception e) {
-                System.out.println("Could not load image " + imageNumber + " for cutscene: " + e.getMessage());
+                LOGGER.debug("Could not load image {} for cutscene: {}", imageNumber, e.getMessage());
                 break;
             }
         }
 
         if (images.isEmpty()) {
-            System.out.println("No cutscene images found in folder: " + folderName);
-            System.out.println("Expected path: assets/storytell/textures/cutscene/" + folderName + "/");
-            System.out.println("Make sure images are named 1.png, 2.png, etc.");
+            LOGGER.warn("No cutscene images found in folder: {}", folderName);
+            LOGGER.warn("Expected path: assets/storytell/textures/cutscene/{}/", folderName);
         } else {
-            System.out.println("Loaded " + images.size() + " images for cutscene: " + folderName);
+            LOGGER.debug("Loaded {} images for cutscene: {}", loadedCount, folderName);
         }
+
+        texturesPreloaded = true;
     }
 
     public void start() {
@@ -74,6 +105,14 @@ public class Cutscene {
     public void stop() {
         this.active = false;
         this.currentImageIndex = -1;
+        // Не очищаем images и imageAlphas для возможного повторного использования
+    }
+
+    public void cleanup() {
+        stop();
+        images.clear();
+        imageAlphas.clear();
+        texturesPreloaded = false;
     }
 
     public boolean isActive() {
@@ -85,8 +124,22 @@ public class Cutscene {
 
         timer++;
 
-        // Обновляем анимации прозрачности
-        for (int i = 0; i < images.size(); i++) {
+        // Оптимизированное обновление прозрачности - только для нужных изображений
+        updateImageAlphas();
+
+        if (timer >= DELAY_BETWEEN_IMAGES) {
+            timer = 0;
+            currentImageIndex++;
+
+            if (currentImageIndex >= images.size()) {
+                stop();
+            }
+        }
+    }
+
+    private void updateImageAlphas() {
+        // Обновляем только текущее и предыдущее изображение для экономии CPU
+        for (int i = Math.max(0, currentImageIndex - 1); i <= Math.min(images.size() - 1, currentImageIndex + 1); i++) {
             float currentAlpha = imageAlphas.get(i);
 
             if (i == currentImageIndex) {
@@ -104,15 +157,6 @@ public class Cutscene {
                 }
             }
         }
-
-        if (timer >= DELAY_BETWEEN_IMAGES) {
-            timer = 0;
-            currentImageIndex++;
-
-            if (currentImageIndex >= images.size()) {
-                stop();
-            }
-        }
     }
 
     public void render(GuiGraphics guiGraphics) {
@@ -122,40 +166,41 @@ public class Cutscene {
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
 
-        // Рендерим полностью непрозрачный черный фон
+        // Оптимизированный рендеринг черного фона
         renderBlackBackground(guiGraphics, width, height);
 
-        // Рендерим все изображения с их текущей прозрачностью
-        for (int i = 0; i <= currentImageIndex; i++) {
-            if (i < images.size()) {
-                float alpha = imageAlphas.get(i);
-                if (alpha > 0.0f) {
-                    RenderSystem.enableBlend();
-                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
-                    guiGraphics.blit(images.get(i), 0, 0, 0, 0, width, height, width, height);
-                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                    RenderSystem.disableBlend();
-                }
-            }
-        }
+        // Рендерим только видимые изображения (с alpha > 0)
+        renderVisibleImages(guiGraphics, width, height);
     }
 
     private void renderBlackBackground(GuiGraphics guiGraphics, int width, int height) {
-        // Используем низкоуровневый рендеринг для гарантированного отображения фона
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
-        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        // Используем встроенный метод вместо низкоуровневого рендеринга
+        guiGraphics.fill(0, 0, width, height, 0xFF000000);
+    }
 
-        Matrix4f matrix = guiGraphics.pose().last().pose();
-        bufferBuilder.vertex(matrix, 0, height, 0).color(0, 0, 0, 255).endVertex();
-        bufferBuilder.vertex(matrix, width, height, 0).color(0, 0, 0, 255).endVertex();
-        bufferBuilder.vertex(matrix, width, 0, 0).color(0, 0, 0, 255).endVertex();
-        bufferBuilder.vertex(matrix, 0, 0, 0).color(0, 0, 0, 255).endVertex();
+    private void renderVisibleImages(GuiGraphics guiGraphics, int width, int height) {
+        RenderSystem.enableBlend();
 
-        BufferUploader.drawWithShader(bufferBuilder.end());
+        // Рендерим ВСЕ изображения, которые должны быть видимы
+        for (int i = 0; i <= currentImageIndex; i++) {
+            float alpha = imageAlphas.get(i);
+            if (alpha > 0.001f) { // Не рендерим почти невидимые изображения
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
+                guiGraphics.blit(images.get(i), 0, 0, 0, 0, width, height, width, height);
+            }
+        }
+
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.disableBlend();
     }
 
     public boolean hasImages() {
         return !images.isEmpty();
+    }
+
+    // Статический метод для очистки глобального кэша
+    public static void clearTextureCache() {
+        TEXTURE_CACHE.clear();
+        TEXTURE_LOADED.clear();
     }
 }

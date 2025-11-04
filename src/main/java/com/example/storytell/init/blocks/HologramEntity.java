@@ -1,4 +1,3 @@
-// HologramEntity.java
 package com.example.storytell.init.blocks;
 
 import com.example.storytell.init.HologramConfig;
@@ -34,8 +33,13 @@ public class HologramEntity extends Entity {
     private static final EntityDataAccessor<Float> DATA_VERTICAL_OFFSET =
             SynchedEntityData.defineId(HologramEntity.class, EntityDataSerializers.FLOAT);
 
-    private static final float ANIMATION_SPEED = 0.2F;
+    private static final float ANIMATION_SPEED = 0.1F;
     private static final float VERTICAL_TRAVEL_DISTANCE = 1.0F;
+
+    // Кэшированные значения для оптимизации
+    private ResourceLocation cachedTexture;
+    private String cachedText;
+    private boolean configDirty = true;
 
     private boolean hasPlayedAppearSound = false;
     private boolean hasPlayedDisappearSound = false;
@@ -48,6 +52,10 @@ public class HologramEntity extends Entity {
     private int flickerTimer = 0;
     private static final int FLICKER_INTERVAL = 5;
 
+    // Кэш для проверки изменений конфига
+    private int lastConfigCheckTick = 0;
+    private static final int CONFIG_CHECK_INTERVAL = 200; // Проверяем каждые 10 секунд вместо 100 тиков
+
     public HologramEntity(EntityType<?> type, Level world) {
         super(type, world);
         this.setInvulnerable(true);
@@ -56,20 +64,35 @@ public class HologramEntity extends Entity {
         this.entityData.set(DATA_IS_APPEARING, true);
         this.entityData.set(DATA_VERTICAL_OFFSET, VERTICAL_TRAVEL_DISTANCE);
 
-        setTextureFromConfig();
+        // Инициализация кэша
+        cacheConfigValues();
     }
 
     @Override
     protected void defineSynchedData() {
-        this.entityData.define(DATA_TEXTURE, HologramConfig.getHologramTexture().toString());
-        this.entityData.define(DATA_DISPLAY_TEXT, HologramConfig.getHologramText());
+        this.entityData.define(DATA_TEXTURE, getDefaultTexture().toString());
+        this.entityData.define(DATA_DISPLAY_TEXT, "");
         this.entityData.define(DATA_ANIMATION_PROGRESS, 0.0F);
         this.entityData.define(DATA_IS_APPEARING, true);
         this.entityData.define(DATA_VERTICAL_OFFSET, VERTICAL_TRAVEL_DISTANCE);
     }
 
+    private ResourceLocation getDefaultTexture() {
+        return new ResourceLocation("storytell:textures/entity/default_hologram.png");
+    }
+
     @Override
     protected void readAdditionalSaveData(CompoundTag compound) {
+        // Читаем базовые данные анимации
+        if (compound.contains("AnimationProgress")) {
+            setAnimationProgress(compound.getFloat("AnimationProgress"));
+        }
+        if (compound.contains("IsAppearing")) {
+            setAppearing(compound.getBoolean("IsAppearing"));
+        }
+        if (compound.contains("VerticalOffset")) {
+            setVerticalOffset(compound.getFloat("VerticalOffset"));
+        }
         if (compound.contains("Texture")) {
             setTextureFromString(compound.getString("Texture"));
         } else {
@@ -80,10 +103,16 @@ public class HologramEntity extends Entity {
         } else {
             setTextFromConfig();
         }
+
+        cacheConfigValues();
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag compound) {
+        // Сохраняем базовые данные анимации
+        compound.putFloat("AnimationProgress", getAnimationProgress());
+        compound.putBoolean("IsAppearing", isAppearing());
+        compound.putFloat("VerticalOffset", getVerticalOffset());
         compound.putString("Texture", this.entityData.get(DATA_TEXTURE));
         compound.putString("Text", this.entityData.get(DATA_DISPLAY_TEXT));
     }
@@ -105,6 +134,7 @@ public class HologramEntity extends Entity {
 
     public void setTexture(ResourceLocation tex) {
         this.entityData.set(DATA_TEXTURE, tex.toString());
+        this.cachedTexture = tex;
     }
 
     public void setTextureFromString(String texture) {
@@ -116,27 +146,46 @@ public class HologramEntity extends Entity {
     }
 
     public ResourceLocation getTexture() {
-        try {
-            return new ResourceLocation(this.entityData.get(DATA_TEXTURE));
-        } catch (Exception e) {
+        if (cachedTexture == null) {
+            cacheConfigValues();
+        }
+        return cachedTexture;
+    }
+
+    private ResourceLocation getTextureFromConfig() {
+        if (this.level() != null && this.level().isClientSide()) {
+            return HologramConfig.getHologramTextureClient();
+        } else {
             return HologramConfig.getHologramTexture();
         }
     }
 
     public void setTextureFromConfig() {
-        setTexture(HologramConfig.getHologramTexture());
+        setTexture(getTextureFromConfig());
     }
 
     public void setDisplayText(String text) {
         this.entityData.set(DATA_DISPLAY_TEXT, text);
+        this.cachedText = text;
     }
 
     public void setTextFromConfig() {
-        setDisplayText(HologramConfig.getHologramText());
+        setDisplayText(getTextFromConfig());
+    }
+
+    private String getTextFromConfig() {
+        if (this.level() != null && this.level().isClientSide()) {
+            return HologramConfig.getHologramTextClient();
+        } else {
+            return HologramConfig.getHologramText();
+        }
     }
 
     public String getDisplayText() {
-        return this.entityData.get(DATA_DISPLAY_TEXT);
+        if (cachedText == null) {
+            cacheConfigValues();
+        }
+        return cachedText != null ? cachedText : "";
     }
 
     public float getAnimationProgress() {
@@ -174,7 +223,6 @@ public class HologramEntity extends Entity {
         Level level = this.level();
         if (level != null && !level.isClientSide()) {
             if (sound == null) {
-                LOGGER.warn("Attempted to play null sound event");
                 return;
             }
 
@@ -186,8 +234,15 @@ public class HologramEntity extends Entity {
         try {
             return soundEvent != null ? soundEvent.get() : null;
         } catch (IllegalStateException e) {
-            LOGGER.warn("Sound event not ready: " + e.getMessage());
             return null;
+        }
+    }
+
+    private SoundEvent getAmbientSound() {
+        if (this.level() != null && this.level().isClientSide()) {
+            return HologramConfig.getHologramAmbientSoundClient();
+        } else {
+            return HologramConfig.getHologramAmbientSound();
         }
     }
 
@@ -248,6 +303,7 @@ public class HologramEntity extends Entity {
 
             if (currentProgress <= 0.0F && currentOffset >= VERTICAL_TRAVEL_DISTANCE) {
                 this.discard();
+                return; // Прерываем выполнение после удаления
             }
         }
 
@@ -255,12 +311,7 @@ public class HologramEntity extends Entity {
         if (isAmbientSoundPlaying && currentProgress >= 1.0F && isAppearing()) {
             ambientSoundTimer++;
             if (ambientSoundTimer >= AMBIENT_SOUND_INTERVAL) {
-                SoundEvent ambientSound = HologramConfig.getHologramAmbientSound();
-                if (ambientSound == null) {
-                    // Fallback на стандартный ambient sound
-                    ambientSound = getSafeSoundEvent(ModSounds.HOLOGRAM_AMBIENT);
-                }
-
+                SoundEvent ambientSound = getAmbientSound();
                 if (ambientSound != null) {
                     playHologramSound(ambientSound, 0.12F);
                 }
@@ -269,6 +320,35 @@ public class HologramEntity extends Entity {
         } else if (!isAppearing()) {
             isAmbientSoundPlaying = false;
             ambientSoundTimer = 0;
+        }
+
+        // Оптимизированная проверка конфига - реже и только если помечен как грязный
+        if (configDirty || (this.tickCount - lastConfigCheckTick >= CONFIG_CHECK_INTERVAL)) {
+            synchronizeWithConfig();
+            lastConfigCheckTick = this.tickCount;
+            configDirty = false;
+        }
+    }
+
+    private void cacheConfigValues() {
+        this.cachedTexture = getTextureFromConfig();
+        this.cachedText = getTextFromConfig();
+    }
+
+    private void synchronizeWithConfig() {
+        ResourceLocation currentTexture = getTexture();
+        ResourceLocation configTexture = getTextureFromConfig();
+        String currentText = getDisplayText();
+        String configText = getTextFromConfig();
+
+        // Если текстура не совпадает с конфигом, обновляем ее
+        if (!currentTexture.equals(configTexture)) {
+            setTextureFromConfig();
+        }
+
+        // Если текст не совпадает с конфигом, обновляем его
+        if (!currentText.equals(configText)) {
+            setTextFromConfig();
         }
     }
 
@@ -283,4 +363,22 @@ public class HologramEntity extends Entity {
     public float getFlickerIntensity() {
         return flickerIntensity;
     }
+
+    // Метод для принудительного обновления из конфига
+    public void forceConfigUpdate() {
+        configDirty = true;
+        cacheConfigValues();
+        setTextureFromConfig();
+        setTextFromConfig();
+    }
+
+    // Метод для проверки состояния блокировки
+    public boolean isLocked() {
+        if (this.level() != null && this.level().isClientSide()) {
+            return HologramConfig.isHologramLockedClient();
+        } else {
+            return HologramConfig.isHologramLocked();
+        }
+    }
+
 }

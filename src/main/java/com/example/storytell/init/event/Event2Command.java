@@ -29,6 +29,8 @@ public class Event2Command {
         int successCount = 0;
         MinecraftServer server = source.getServer();
 
+
+
         for (ServerPlayer player : targets) {
             try {
                 final String playerName = player.getScoreboardName();
@@ -49,7 +51,10 @@ public class Event2Command {
                 int functionResult = server.getCommands().performCommand(functionResults, functionCommand);
                 successCount++;
 
+                source.sendSuccess(() -> Component.literal("Started event2 for player: " + playerName), true);
+
             } catch (Exception e) {
+                source.sendFailure(Component.literal("Failed to start event2 for player " + player.getScoreboardName() + ": " + e.getMessage()));
                 e.printStackTrace();
             }
         }

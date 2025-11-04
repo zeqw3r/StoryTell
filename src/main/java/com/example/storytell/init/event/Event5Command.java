@@ -160,7 +160,7 @@ public class Event5Command {
                     .withSuppressedOutput();
 
             // Заменяем ~ ~ ~ на конкретные координаты
-            String particleCommand = String.format("particle minecraft:campfire_signal_smoke %d %d %d 5 5 5 1 10000 force", x, y, z);
+            String particleCommand = String.format("particle minecraft:campfire_signal_smoke %d %d %d 1 1 1 0.1 1000 force", x, y, z);
             int result = server.getCommands().performPrefixedCommand(commandSource, particleCommand);
 
             if (result > 0) {
@@ -203,7 +203,7 @@ public class Event5Command {
             level.explode(
                     null, // Источник взрыва (null - нет источника)
                     (double) x, (double) y, (double) z, // Координаты
-                    100.0f, // Сила взрыва
+                    10.0f, // Сила взрыва
                     true, // Создает огонь
                     Level.ExplosionInteraction.TNT // Тип взрыва - как у TNT
             );

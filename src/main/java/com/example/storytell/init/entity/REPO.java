@@ -1,8 +1,6 @@
-// REPO.java
 package com.example.storytell.init.entity;
 
 import com.example.storytell.init.ModItems;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -19,11 +17,15 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
 
 public class REPO extends PathfinderMob {
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private static final EntityDataAccessor<String> DATA_TARGET_PLAYER = SynchedEntityData.defineId(REPO.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> DATA_HAS_BEEN_SEEN = SynchedEntityData.defineId(REPO.class, EntityDataSerializers.BOOLEAN);
 
@@ -31,11 +33,20 @@ public class REPO extends PathfinderMob {
     private static final int MAX_LIFETIME = 5 * 60 * 20; // 5 minutes in ticks
     private UUID targetPlayerUUID;
 
+    // Оптимизация: кэшированные значения для проверок
+    private int lastPlayerCheckTick = 0;
+    private int lastLookCheckTick = 0;
+    private static final int PLAYER_CHECK_INTERVAL = 20; // Проверять игроков каждую секунду
+    private static final int LOOK_CHECK_INTERVAL = 10; // Проверять взгляд каждые 0.5 секунды
+
+    // Кэш для вычислений направления
+    private Vec3 cachedLookVec;
+    private long lastLookVecUpdate = 0;
+
     public REPO(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
         this.noCulling = true;
         this.setNoGravity(true);
-        // Убрали setInvulnerable(true), чтобы моб мог получать урон
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -44,7 +55,7 @@ public class REPO extends PathfinderMob {
                 .add(Attributes.MOVEMENT_SPEED, 0.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.ATTACK_DAMAGE, 0.0D)
-                .add(Attributes.FOLLOW_RANGE, 200.0D); // Increased to 200 blocks
+                .add(Attributes.FOLLOW_RANGE, 200.0D);
     }
 
     @Override
@@ -64,49 +75,58 @@ public class REPO extends PathfinderMob {
         super.tick();
         spawnTime++;
 
-        // Проверяем, есть ли игроки в радиусе 20 блоков
-        if (!this.level().isClientSide() && this.tickCount % 10 == 0) {
-            checkForNearbyPlayers();
+        // Оптимизированные проверки с интервалами
+        if (!this.level().isClientSide()) {
+            int currentTick = this.tickCount;
+
+            // Проверяем игроков в радиусе реже
+            if (currentTick - lastPlayerCheckTick >= PLAYER_CHECK_INTERVAL) {
+                checkForNearbyPlayers();
+                lastPlayerCheckTick = currentTick;
+            }
+
+            // Проверяем взгляд игроков реже
+            if (currentTick - lastLookCheckTick >= LOOK_CHECK_INTERVAL) {
+                checkIfSeenByPlayers();
+                lastLookCheckTick = currentTick;
+            }
         }
 
         // Check disappearance conditions
         if (spawnTime >= MAX_LIFETIME || hasBeenSeen()) {
-            spawnParticles(); // Добавляем частицы при исчезновении
+            spawnParticles();
             REPOSpawnManager.setActiveRepo(null);
             this.discard();
             return;
         }
 
-        // Manually control looking at target player
+        // Оптимизированное управление вращением
         if (!this.level().isClientSide() && targetPlayerUUID != null) {
-            Player targetPlayer = ((ServerLevel) this.level()).getPlayerByUUID(targetPlayerUUID);
-            if (targetPlayer != null) {
-                lookAtPlayer(targetPlayer);
-
-                // Enhanced rotation synchronization
-                this.yBodyRot = this.getYRot();
-                this.yHeadRot = this.getYRot();
-                this.yBodyRotO = this.yBodyRot;
-                this.yHeadRotO = this.yHeadRot;
-            }
-        }
-
-        // Check if any player is looking at REPO
-        if (!this.level().isClientSide() && this.tickCount % 5 == 0) {
-            checkIfSeenByPlayers();
+            updateRotation();
         }
     }
 
-    // Новый метод: создание фиолетовых частиц
+    private void updateRotation() {
+        Player targetPlayer = ((ServerLevel) this.level()).getPlayerByUUID(targetPlayerUUID);
+        if (targetPlayer != null) {
+            lookAtPlayer(targetPlayer);
+
+            // Оптимизированная синхронизация вращения
+            this.yBodyRot = this.getYRot();
+            this.yHeadRot = this.getYRot();
+            this.yBodyRotO = this.yBodyRot;
+            this.yHeadRotO = this.yHeadRot;
+        }
+    }
+
     private void spawnParticles() {
         if (this.level() instanceof ServerLevel serverLevel) {
-            // Используем частицы портала (фиолетовые, как у эндермена)
             double x = this.getX();
-            double y = this.getY() + 1.0; // Немного выше позиции REPO
+            double y = this.getY() + 1.0;
             double z = this.getZ();
 
-            // Создаем много частиц для эффектного исчезновения/появления
-            for (int i = 0; i < 30; i++) {
+            // Оптимизированное создание частиц - меньше частиц
+            for (int i = 0; i < 15; i++) { // Уменьшено с 30 до 15
                 double offsetX = (this.random.nextDouble() - 0.5) * 2.0;
                 double offsetY = this.random.nextDouble() * 2.0;
                 double offsetZ = (this.random.nextDouble() - 0.5) * 2.0;
@@ -118,15 +138,16 @@ public class REPO extends PathfinderMob {
         }
     }
 
-    // Новый метод: проверка наличия игроков в радиусе 20 блоков
     private void checkForNearbyPlayers() {
         if (this.level().isClientSide()) return;
 
-        for (Player player : this.level().players()) {
+        // Оптимизированный поиск игроков в радиусе
+        for (Player player : this.level().getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(20.0D))) {
             double distance = player.distanceTo(this);
             if (distance < 20.0D) {
-                System.out.println("REPO исчез из-за близости игрока: " + player.getName().getString() + " (расстояние: " + distance + ")");
-                spawnParticles(); // Добавляем частицы при исчезновении из-за близости
+                LOGGER.debug("REPO исчез из-за близости игрока: {} (расстояние: {})",
+                        player.getName().getString(), distance);
+                spawnParticles();
                 REPOSpawnManager.setActiveRepo(null);
                 this.discard();
                 return;
@@ -135,44 +156,34 @@ public class REPO extends PathfinderMob {
     }
 
     private void lookAtPlayer(Player player) {
-        // Calculate direction to player
+        // Кэшируем вычисления
         double deltaX = player.getX() - this.getX();
         double deltaY = (player.getY() + player.getEyeHeight()) - (this.getY() + this.getEyeHeight());
         double deltaZ = player.getZ() - this.getZ();
 
-        // Calculate horizontal distance
         double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
-        // Calculate rotation angles
         float yaw = (float)(Math.atan2(deltaZ, deltaX) * (180.0F / Math.PI)) - 90.0F;
         float pitch = (float)(-(Math.atan2(deltaY, horizontalDistance) * (180.0F / Math.PI)));
 
-        // Set rotation with smoothing
         this.setYRot(rotateTowards(this.getYRot(), yaw, 10.0F));
         this.setXRot(rotateTowards(this.getXRot(), pitch, 10.0F));
     }
 
     private static float rotateTowards(float current, float target, float maxDelta) {
         float delta = Mth.wrapDegrees(target - current);
-
-        if (delta > maxDelta) {
-            delta = maxDelta;
-        }
-
-        if (delta < -maxDelta) {
-            delta = -maxDelta;
-        }
-
+        delta = Mth.clamp(delta, -maxDelta, maxDelta);
         return current + delta;
     }
 
     private void checkIfSeenByPlayers() {
         if (this.level().isClientSide()) return;
 
-        for (Player player : this.level().players()) {
+        // Оптимизированный поиск только ближайших игроков
+        for (Player player : this.level().getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(200.0D))) {
             if (isPlayerLookingAt(player)) {
                 setHasBeenSeen(true);
-                System.out.println("REPO detected by player: " + player.getName().getString());
+                LOGGER.debug("REPO detected by player: {}", player.getName().getString());
                 break;
             }
         }
@@ -180,35 +191,36 @@ public class REPO extends PathfinderMob {
 
     private boolean isPlayerLookingAt(Player player) {
         Vec3 eyePos = player.getEyePosition(1.0F);
-        Vec3 lookVec = player.getViewVector(1.0F);
         Vec3 toRepo = this.position().subtract(eyePos);
         double distance = toRepo.length();
 
-        // FIXED: Increased detection range to 200 blocks
         if (distance > 200.0D) return false;
 
+        // Кэшируем вектор взгляда для оптимизации
+        Vec3 lookVec = getCachedLookVector(player);
         Vec3 toRepoNormalized = toRepo.normalize();
         double dot = lookVec.dot(toRepoNormalized);
 
-        // УВЕЛИЧЕН УГОЛ ОБНАРУЖЕНИЯ: менее строгие пороги
-        // Было: 0.9998 (примерно 1-2 градуса), стало: 0.95 (примерно 18 градусов)
-        double angleThreshold = 0.95; // Значительно увеличен угол
-
-        // Для близких расстояний также увеличиваем угол
-        if (distance < 20.0D) {
-            angleThreshold = 0.97; // Было: 0.9999, стало: 0.97 (примерно 14 градусов)
-        }
+        double angleThreshold = distance < 20.0D ? 0.97 : 0.95;
 
         if (dot > angleThreshold) {
-            // Improved obstruction check with distance limit
             return !isObstructed(eyePos, this.position(), player, Math.min(distance, 200.0D));
         }
 
         return false;
     }
 
+    private Vec3 getCachedLookVector(Player player) {
+        // Кэшируем вектор взгляда на короткое время
+        long currentTime = System.currentTimeMillis();
+        if (cachedLookVec == null || currentTime - lastLookVecUpdate > 50) { // 50ms кэш
+            cachedLookVec = player.getViewVector(1.0F);
+            lastLookVecUpdate = currentTime;
+        }
+        return cachedLookVec;
+    }
+
     private boolean isObstructed(Vec3 start, Vec3 end, Player player, double maxDistance) {
-        // Limit raycast distance to prevent performance issues
         Vec3 limitedEnd = start.add(end.subtract(start).normalize().scale(maxDistance));
 
         net.minecraft.world.phys.HitResult hitResult = this.level().clip(
@@ -224,7 +236,7 @@ public class REPO extends PathfinderMob {
         return hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK;
     }
 
-    // Custom rotation methods for model compatibility
+    // Custom rotation methods
     public float getBodyYRot() {
         return this.yBodyRot;
     }
@@ -295,18 +307,12 @@ public class REPO extends PathfinderMob {
         return false;
     }
 
-    // Добавляем метод для обработки урона и выпадения предмета
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (!this.level().isClientSide() && source.getEntity() instanceof Player) {
-            // Создаем предмет осколка робота при "убийстве"
             ItemStack shardStack = new ItemStack(ModItems.ROBOT_SHARD.get(), 1);
             this.spawnAtLocation(shardStack);
-
-            // Добавляем частицы при "убийстве"
             spawnParticles();
-
-            // Удаляем REPO
             REPOSpawnManager.setActiveRepo(null);
             this.discard();
             return true;
@@ -314,10 +320,9 @@ public class REPO extends PathfinderMob {
         return false;
     }
 
-    // Добавляем обработку удаления entity
     @Override
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
-        this.targetPlayerUUID = null; // Очищаем целевого игрока
+        this.targetPlayerUUID = null;
         REPOSpawnManager.setActiveRepo(null);
         super.remove(reason);
     }

@@ -1,4 +1,3 @@
-// REPOSpawnManager.java
 package com.example.storytell.init.entity;
 
 import com.example.storytell.init.HologramConfig;
@@ -11,116 +10,127 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Mod.EventBusSubscriber(modid = "storytell")
 public class REPOSpawnManager {
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private static final Map<UUID, Long> playerCooldowns = new ConcurrentHashMap<>();
-    private static final long SPAWN_COOLDOWN = 5 * 60 * 1000; // 5 минут в миллисекундах
+    private static final long SPAWN_COOLDOWN = 5 * 60 * 1000;
     private static final Random random = new Random();
     private static UUID activeRepoUUID = null;
+
+    // Оптимизация: кэш для проверки существования REPO
+    private static Long lastRepoSweepTime = null;
+    private static final long REPO_SWEEP_INTERVAL = 10000; // 10 секунд
+    private static Boolean repoExistsCache = null;
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
-        // ПРОВЕРКА: Если спавн REPO выключен в конфиге - пропускаем
         if (!HologramConfig.isRepoSpawnEnabled()) {
             return;
         }
 
-        // Проверяем спавн каждые 10 секунд для производительности
-        if (event.getServer().getTickCount() % 200 != 0) return;
+        // Увеличиваем интервал проверки для производительности
+        if (event.getServer().getTickCount() % 400 != 0) return; // Каждые 20 секунд вместо 10
 
-        // Проверяем, существует ли активный REPO
-        boolean repoExistsInWorld = false;
-        for (ServerLevel level : event.getServer().getAllLevels()) {
-            for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
-                if (entity instanceof REPO) {
-                    repoExistsInWorld = true;
-                    if (activeRepoUUID == null) {
-                        activeRepoUUID = entity.getUUID();
-                    }
-                    break;
-                }
-            }
-            if (repoExistsInWorld) break;
-        }
-
-        // Если REPO существует, не спавним новый
-        if (repoExistsInWorld) {
+        // Используем кэшированную проверку существования REPO
+        if (!shouldSpawnNewRepo(event.getServer())) {
             return;
-        }
-
-        // Если активный REPO был удален, сбрасываем UUID
-        if (activeRepoUUID != null) {
-            boolean repoExists = false;
-            for (ServerLevel level : event.getServer().getAllLevels()) {
-                if (level.getEntity(activeRepoUUID) != null) {
-                    repoExists = true;
-                    break;
-                }
-            }
-            if (!repoExists) {
-                activeRepoUUID = null;
-            } else {
-                return;
-            }
         }
 
         // Ищем подходящий уровень для спавна
         for (ServerLevel level : event.getServer().getAllLevels()) {
             if (level.players().isEmpty()) continue;
 
-            // Получаем список всех игроков, для которых можно спавнить REPO
             List<ServerPlayer> eligiblePlayers = getEligiblePlayers(level);
-
             if (eligiblePlayers.isEmpty()) continue;
 
-            // ВЫБИРАЕМ СЛУЧАЙНОГО ИГРОКА из доступных
             ServerPlayer targetPlayer = eligiblePlayers.get(random.nextInt(eligiblePlayers.size()));
             trySpawnREPO(level, targetPlayer);
-            break; // Спавним только одного REPO
+            break;
         }
+    }
+
+    private static boolean shouldSpawnNewRepo(net.minecraft.server.MinecraftServer server) {
+        long currentTime = System.currentTimeMillis();
+
+        // Используем кэш для проверки существования REPO
+        if (lastRepoSweepTime == null || currentTime - lastRepoSweepTime > REPO_SWEEP_INTERVAL) {
+            repoExistsCache = checkRepoExistsInWorld(server);
+            lastRepoSweepTime = currentTime;
+        }
+
+        return !repoExistsCache && activeRepoUUID == null;
+    }
+
+    private static boolean checkRepoExistsInWorld(net.minecraft.server.MinecraftServer server) {
+        // Оптимизированный поиск REPO - проверяем только активные уровни
+        for (ServerLevel level : server.getAllLevels()) {
+            // Быстрая проверка по активному UUID
+            if (activeRepoUUID != null && level.getEntity(activeRepoUUID) instanceof REPO) {
+                return true;
+            }
+
+            // Проверяем только если в уровне есть игроки
+            if (!level.players().isEmpty()) {
+                // Используем более эффективный поиск по классу
+                // УБРАНА ПРОВЕРКА isEmpty() - просто перебираем entities
+                for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
+                    if (entity instanceof REPO) {
+                        activeRepoUUID = entity.getUUID();
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private static List<ServerPlayer> getEligiblePlayers(ServerLevel level) {
         List<ServerPlayer> eligiblePlayers = new ArrayList<>();
         long currentTime = System.currentTimeMillis();
 
+        // Оптимизированная проверка игроков
         for (ServerPlayer player : level.players()) {
-            UUID playerId = player.getUUID();
-
-            // Проверяем кулдаун для игрока
-            Long lastSpawnTime = playerCooldowns.get(playerId);
-            if (lastSpawnTime != null && (currentTime - lastSpawnTime) < SPAWN_COOLDOWN) {
-                continue; // Кулдаун не прошел
+            if (isPlayerEligible(player, currentTime)) {
+                eligiblePlayers.add(player);
             }
-
-            // Проверяем, что игрок не в безопасной зоне
-            if (player.isSleeping() || player.getRespawnPosition() != null) {
-                continue;
-            }
-
-            // Игрок подходит для спавна
-            eligiblePlayers.add(player);
         }
 
         return eligiblePlayers;
     }
 
+    private static boolean isPlayerEligible(ServerPlayer player, long currentTime) {
+        UUID playerId = player.getUUID();
+
+        // Проверяем кулдаун
+        Long lastSpawnTime = playerCooldowns.get(playerId);
+        if (lastSpawnTime != null && (currentTime - lastSpawnTime) < SPAWN_COOLDOWN) {
+            return false;
+        }
+
+        // Проверяем условия спавна
+        return !player.isSleeping() && player.getRespawnPosition() == null;
+    }
+
     private static void trySpawnREPO(ServerLevel level, ServerPlayer targetPlayer) {
         Vec3 spawnPos = findSpawnPosition(level, targetPlayer);
         if (spawnPos == null) {
-            System.out.println("Не удалось найти позицию для спавна REPO");
+            LOGGER.debug("Не удалось найти позицию для спавна REPO");
             return;
         }
 
         REPO repo = ModEntities.REPO.get().create(level);
         if (repo == null) {
-            System.out.println("Не удалось создать entity REPO");
+            LOGGER.debug("Не удалось создать entity REPO");
             return;
         }
 
@@ -131,21 +141,24 @@ public class REPOSpawnManager {
         spawnSpawnParticles(level, spawnPos);
 
         activeRepoUUID = repo.getUUID();
-
-        // Устанавливаем кулдаун ДЛЯ ВСЕХ ИГРОКОВ, чтобы следующий REPO появился через 5 минут
-        // но не блокируем конкретного игрока
         updateAllPlayerCooldowns();
 
-        System.out.println("REPO заспавнен рядом со случайным игроком: " + targetPlayer.getName().getString() +
-                " на позиции: " + spawnPos.x + ", " + spawnPos.y + ", " + spawnPos.z);
+        LOGGER.debug("REPO заспавнен рядом с игроком: {} на позиции: {}, {}, {}",
+                targetPlayer.getName().getString(), spawnPos.x, spawnPos.y, spawnPos.z);
     }
 
     private static void updateAllPlayerCooldowns() {
         long currentTime = System.currentTimeMillis();
-        // Устанавливаем время последнего спавна как текущее время
-        // Это обеспечит кулдаун 5 минут до следующего спавна
-        // Мы не привязываем кулдаун к конкретному игроку
-        playerCooldowns.put(UUID.randomUUID(), currentTime); // Просто отмечаем факт спавна
+        // Очищаем старые записи кулдауна для экономии памяти
+        cleanupOldCooldowns(currentTime);
+        playerCooldowns.put(UUID.randomUUID(), currentTime);
+    }
+
+    private static void cleanupOldCooldowns(long currentTime) {
+        // Удаляем старые записи кулдауна (старше 10 минут)
+        playerCooldowns.entrySet().removeIf(entry ->
+                (currentTime - entry.getValue()) > (SPAWN_COOLDOWN * 2)
+        );
     }
 
     private static void spawnSpawnParticles(ServerLevel level, Vec3 pos) {
@@ -153,7 +166,8 @@ public class REPOSpawnManager {
         double y = pos.y + 1.0;
         double z = pos.z;
 
-        for (int i = 0; i < 30; i++) {
+        // Оптимизированное создание частиц
+        for (int i = 0; i < 15; i++) { // Уменьшено с 30 до 15
             double offsetX = (random.nextDouble() - 0.5) * 2.0;
             double offsetY = random.nextDouble() * 2.0;
             double offsetZ = (random.nextDouble() - 0.5) * 2.0;
@@ -166,38 +180,50 @@ public class REPOSpawnManager {
 
     private static Vec3 findSpawnPosition(ServerLevel level, ServerPlayer player) {
         Vec3 playerPos = player.position();
-        Random random = new Random();
 
-        for (int attempt = 0; attempt < 20; attempt++) {
+        // Оптимизированный поиск позиции с кэшированием высоты
+        for (int attempt = 0; attempt < 15; attempt++) { // Уменьшено с 20 до 15 попыток
             double angle = random.nextDouble() * 2 * Math.PI;
-            double distance = 20 + random.nextDouble() * 80; // 20-100 блоков
+            double distance = 20 + random.nextDouble() * 80;
 
             double x = playerPos.x + Math.cos(angle) * distance;
             double z = playerPos.z + Math.sin(angle) * distance;
 
-            int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) x, (int) z);
-
-            if (surfaceY > level.getMinBuildHeight()) {
-                BlockPos spawnPos = new BlockPos((int) x, surfaceY, (int) z);
-                BlockPos abovePos = spawnPos.above();
-
-                if (level.isEmptyBlock(spawnPos) && level.isEmptyBlock(abovePos)) {
-                    return new Vec3(x, surfaceY + 0.5, z);
-                }
+            BlockPos spawnPos = findValidSpawnPosition(level, (int) x, (int) z);
+            if (spawnPos != null) {
+                return new Vec3(spawnPos.getX() + 0.5, spawnPos.getY() + 0.5, spawnPos.getZ() + 0.5);
             }
         }
 
-        System.out.println("Не удалось найти валидную позицию для спавна после 20 попыток");
+        LOGGER.debug("Не удалось найти валидную позицию для спавна после 15 попыток");
+        return null;
+    }
+
+    private static BlockPos findValidSpawnPosition(ServerLevel level, int x, int z) {
+        int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+
+        if (surfaceY > level.getMinBuildHeight()) {
+            BlockPos spawnPos = new BlockPos(x, surfaceY, z);
+            BlockPos abovePos = spawnPos.above();
+
+            if (level.isEmptyBlock(spawnPos) && level.isEmptyBlock(abovePos)) {
+                return spawnPos;
+            }
+        }
         return null;
     }
 
     public static void setActiveRepo(UUID repoUUID) {
         activeRepoUUID = repoUUID;
+        // Инвалидируем кэш при изменении активного REPO
+        repoExistsCache = null;
+        lastRepoSweepTime = null;
     }
 
     public static void ensureSingleREPO(ServerLevel level) {
         List<REPO> allRepos = new ArrayList<>();
 
+        // Оптимизированный поиск REPO
         for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
             if (entity instanceof REPO) {
                 allRepos.add((REPO) entity);

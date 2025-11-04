@@ -1,41 +1,50 @@
-// CutsceneManager.java
 package com.example.storytell.init.cutscene;
 
 import net.minecraft.client.gui.GuiGraphics;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class CutsceneManager {
+    private static final Logger LOGGER = LogManager.getLogger();
     private static CutsceneManager instance;
     private Cutscene currentCutscene;
 
+    // Статический блок инициализации
+    static {
+        instance = new CutsceneManager();
+    }
+
     public static CutsceneManager getInstance() {
-        if (instance == null) {
-            instance = new CutsceneManager();
-        }
         return instance;
     }
 
-    public void startCutscene(String folderName) {
-        System.out.println("CutsceneManager: Starting cutscene " + folderName);
+    // Приватный конструктор для синглтона
+    private CutsceneManager() {}
 
+    public void startCutscene(String folderName) {
+        LOGGER.debug("Starting cutscene: {}", folderName);
+
+        // Останавливаем предыдущую катсцену и очищаем ресурсы
         if (currentCutscene != null) {
-            System.out.println("Stopping previous cutscene");
-            stopCutscene();
+            LOGGER.debug("Stopping previous cutscene");
+            currentCutscene.cleanup();
+            currentCutscene = null;
         }
 
         currentCutscene = new Cutscene(folderName);
         if (currentCutscene.hasImages()) {
             currentCutscene.start();
-            System.out.println("Cutscene started successfully");
+            LOGGER.debug("Cutscene started successfully");
         } else {
-            System.out.println("CutsceneManager: No images found for cutscene " + folderName);
+            LOGGER.warn("No images found for cutscene: {}", folderName);
             currentCutscene = null;
         }
     }
 
     public void stopCutscene() {
         if (currentCutscene != null) {
-            System.out.println("Stopping current cutscene");
-            currentCutscene.stop();
+            LOGGER.debug("Stopping current cutscene");
+            currentCutscene.cleanup();
             currentCutscene = null;
         }
     }
@@ -53,6 +62,17 @@ public class CutsceneManager {
     public void tick() {
         if (currentCutscene != null) {
             currentCutscene.tick();
+
+            // Автоматическая очистка если катсцена завершилась
+            if (!currentCutscene.isActive()) {
+                stopCutscene();
+            }
         }
+    }
+
+    // Метод для принудительной очистки всех ресурсов
+    public void cleanupAll() {
+        stopCutscene();
+        Cutscene.clearTextureCache();
     }
 }

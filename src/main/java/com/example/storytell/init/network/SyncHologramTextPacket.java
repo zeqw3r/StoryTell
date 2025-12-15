@@ -1,4 +1,3 @@
-// SyncHologramTextPacket.java
 package com.example.storytell.init.network;
 
 import com.example.storytell.init.HologramConfig;
@@ -14,20 +13,28 @@ public class SyncHologramTextPacket {
         this.text = text;
     }
 
+    // Используем этот конструктор для декодирования
     public SyncHologramTextPacket(FriendlyByteBuf buf) {
         this.text = buf.readUtf(32767);
     }
 
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeUtf(text);
+    // Метод для кодирования
+    public static void encode(SyncHologramTextPacket packet, FriendlyByteBuf buf) {
+        buf.writeUtf(packet.text);
     }
 
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
+    // Метод для декодирования
+    public static SyncHologramTextPacket decode(FriendlyByteBuf buf) {
+        return new SyncHologramTextPacket(buf);
+    }
+
+    // Статический метод handle (исправлено)
+    public static void handle(SyncHologramTextPacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
+        NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             // Устанавливаем текст на клиенте
-            HologramConfig.setHologramTextClient(text);
+            HologramConfig.setHologramTextClient(packet.text);
         });
-        return true;
+        context.setPacketHandled(true);
     }
 }

@@ -41,7 +41,7 @@ public class Event8Command {
             executeScreenShakeCommand(server, "screenshake @a 1 40");
 
             // 4. Через 20 секунд (400 тиков) спавним мобов над игроками
-            scheduleDelayedTask(server, 400, () -> {
+            scheduleDelayedTask(server, 100, () -> {
                 executeMobSpawning(server, players);
             });
 
@@ -63,7 +63,7 @@ public class Event8Command {
 
             for (ServerPlayer player : players) {
                 String soundCommand = String.format(
-                        "execute as %s at %s run playsound storytell:event8 master %s ~ ~ ~ 20.0 1.0",
+                        "execute as %s at %s run playsound storytell:event8 master %s ~ ~ ~ 999999999999.0 1.0",
                         player.getScoreboardName(),
                         player.getScoreboardName(),
                         player.getScoreboardName()

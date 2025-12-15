@@ -18,12 +18,12 @@ public class RadioBlockEntity extends BlockEntity {
     private String currentPlayingSound = ""; // Текущий воспроизводимый звук
 
     // Интервалы воспроизведения звуков (в тиках)
-    private static final int STATIC_INTERVAL = 20; // 1 секунда для статики
+    private static final int STATIC_INTERVAL = 10; // 11 тиков для статики (примерно 0.55 секунды)
     private static final int OTHER_SOUND_INTERVAL = 6000; // 5 минут (300 секунд) для других звуков
 
     // Громкость звуков
     private static final float STATIC_VOLUME = 0.5f; // Тише обычного
-    private static final float OTHER_VOLUME = 1.0f; // Обычная громкость
+    private static final float OTHER_VOLUME = 0.4f; // Обычная громкость
     private static final float ACTION_VOLUME = 1.0f; // Громкость для звуков включения/выключения
 
     public RadioBlockEntity(BlockPos pos, BlockState state) {
@@ -48,9 +48,9 @@ public class RadioBlockEntity extends BlockEntity {
             // Устанавливаем следующий интервал в зависимости от типа звука
             String currentSound = HologramConfig.getRadioSound();
             if ("storytell:radio_static".equals(currentSound)) {
-                soundCooldown = STATIC_INTERVAL; // Непрерывное воспроизведение каждую секунду
+                soundCooldown = STATIC_INTERVAL; // 11 тиков для статики
             } else {
-                soundCooldown = OTHER_SOUND_INTERVAL; // Раз в 5 минут для других звуков
+                soundCooldown = OTHER_SOUND_INTERVAL; // 5 минут для других звуков
             }
         } else {
             soundCooldown--;

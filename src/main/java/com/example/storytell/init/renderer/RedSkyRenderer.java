@@ -1,4 +1,3 @@
-// RedSkyRenderer.java
 package com.example.storytell.init.renderer;
 
 import com.example.storytell.init.network.ClientEventHandlers;

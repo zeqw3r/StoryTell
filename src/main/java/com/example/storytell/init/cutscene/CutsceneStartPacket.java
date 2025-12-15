@@ -1,6 +1,8 @@
 package com.example.storytell.init.cutscene;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,8 +33,10 @@ public class CutsceneStartPacket {
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context context = supplier.get();
         context.enqueueWork(() -> {
-            // Прямой запуск без лишних проверок
-            CutsceneManager.getInstance().startCutscene(folderName);
+            // Запускаем только на клиенте
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                CutsceneManager.getInstance().startCutscene(folderName);
+            });
         });
         return true;
     }

@@ -40,7 +40,10 @@ public class StarMovePacket {
     public static void handle(StarMovePacket packet, Supplier<NetworkEvent.Context> contextSupplier) {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
-            StarManager.applyStarOffset(packet.starName, packet.offsetX, packet.offsetY, packet.offsetZ, packet.duration);
+            // Проверяем, что мы на клиенте
+            if (context.getDirection().getReceptionSide().isClient()) {
+                StarManager.applyStarOffset(packet.starName, packet.offsetX, packet.offsetY, packet.offsetZ, packet.duration);
+            }
         });
         context.setPacketHandled(true);
     }

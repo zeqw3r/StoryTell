@@ -1,4 +1,3 @@
-// UpgradeTransmitterRenderer.java
 package com.example.storytell.init.blocks;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -7,7 +6,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
+@OnlyIn(Dist.CLIENT)
 public class UpgradeTransmitterRenderer implements BlockEntityRenderer<UpgradeTransmitterBlockEntity> {
 
     public UpgradeTransmitterRenderer(BlockEntityRendererProvider.Context context) {}
@@ -20,31 +22,24 @@ public class UpgradeTransmitterRenderer implements BlockEntityRenderer<UpgradeTr
         poseStack.pushPose();
         poseStack.translate(0.5, 1.2, 0.5);
 
-        // Используем полупрозрачные линии для эффекта голограммы
         VertexConsumer builder = buffer.getBuffer(RenderType.LINES);
 
-        // Простой куб над блоком
         float size = 0.3f;
-
-        // Цвет с полупрозрачностью для эффекта голограммы
         int r = 255;
         int g = 255;
         int b = 255;
-        int alpha = 255; // Полупрозрачность
+        int alpha = 255;
 
-        // Нижняя плоскость
         addLine(builder, poseStack, -size, 0, -size, size, 0, -size, r, g, b, alpha);
         addLine(builder, poseStack, size, 0, -size, size, 0, size, r, g, b, alpha);
         addLine(builder, poseStack, size, 0, size, -size, 0, size, r, g, b, alpha);
         addLine(builder, poseStack, -size, 0, size, -size, 0, -size, r, g, b, alpha);
 
-        // Верхняя плоскость
         addLine(builder, poseStack, -size, size, -size, size, size, -size, r, g, b, alpha);
         addLine(builder, poseStack, size, size, -size, size, size, size, r, g, b, alpha);
         addLine(builder, poseStack, size, size, size, -size, size, size, r, g, b, alpha);
         addLine(builder, poseStack, -size, size, size, -size, size, -size, r, g, b, alpha);
 
-        // Вертикальные линии
         addLine(builder, poseStack, -size, 0, -size, -size, size, -size, r, g, b, alpha);
         addLine(builder, poseStack, size, 0, -size, size, size, -size, r, g, b, alpha);
         addLine(builder, poseStack, size, 0, size, size, size, size, r, g, b, alpha);

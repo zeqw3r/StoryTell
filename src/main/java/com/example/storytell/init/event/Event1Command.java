@@ -3,6 +3,7 @@ package com.example.storytell.init.event;
 
 import com.example.storytell.init.network.NetworkHandler;
 import com.example.storytell.init.network.RedSkyPacket;
+import com.example.storytell.init.star.StarManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import net.minecraft.commands.CommandSourceStack;
@@ -32,6 +33,12 @@ public class Event1Command {
         int successCount = 0;
         MinecraftServer server = source.getServer();
 
+        // Принудительная инициализация StarManager перед выполнением команды
+        if (!StarManager.isInitialized()) {
+            System.out.println("Event1: StarManager not initialized, initializing now...");
+            StarManager.init();
+        }
+
         for (ServerPlayer player : targets) {
             try {
                 final String playerName = player.getScoreboardName();
@@ -41,47 +48,83 @@ public class Event1Command {
 
                 final CommandDispatcher<CommandSourceStack> commandDispatcher = server.getCommands().getDispatcher();
 
-                // Execute commands sequentially with delays
-                server.execute(() -> {
-                    // 1. Look up command (immediate)
+                // Проверяем, что звезда blue_star существует
+                if (StarManager.getStarByName("blue_star") == null) {
+                    System.err.println("Event1: CRITICAL - blue_star still not found after initialization!");
+                    source.sendFailure(Component.literal("Error: star blue_star not found"));
+                    return 0;
+                }
+
+                // 0. Сделать звезду видимой немедленно
+                scheduleDelayedTask(server, 0, () -> {
+                    StarManager.setStarVisibility("blue_star", true);
+                    System.out.println("Event1: Made star blue_star visible for player " + playerName);
+                });
+
+                // 1. Look up command (immediate)
+                scheduleDelayedTask(server, 0, () -> {
                     executeLookCommand(server, commandSourceStack, commandDispatcher, playerName, -85);
+                });
 
-                    server.execute(() -> {
-                        // 2. Screen shake after 2 ticks
-                        executeShakeCommand(server, commandSourceStack, commandDispatcher, playerName);
+                // 2. Screen shake after 2 ticks
+                scheduleDelayedTask(server, 2, () -> {
+                    executeShakeCommand(server, commandSourceStack, commandDispatcher, playerName);
+                });
 
-                        server.execute(() -> {
-                            // 3. Red sky after 4 ticks
-                            executeRedSky(server, player);
+                // 3. Red sky after 4 ticks
+                scheduleDelayedTask(server, 4, () -> {
+                    executeRedSky(server, player);
+                });
 
-                            server.execute(() -> {
-                                // 4. Move star using star_move command after 6 ticks
-                                executeStarMovement(server, commandSourceStack, commandDispatcher);
+                // 4. Move star after 6 ticks
+                scheduleDelayedTask(server, 6, () -> {
+                    executeStarMovementInitial(server);
+                });
 
-                                server.execute(() -> {
-                                    // 5. Camera breath after 8 ticks
-                                    executeCameraBreath(server, commandSourceStack, commandDispatcher, playerName);
+                // 5. Camera breath after 8 ticks
+                scheduleDelayedTask(server, 8, () -> {
+                    executeCameraBreath(server, commandSourceStack, commandDispatcher, playerName);
+                });
 
-                                    server.execute(() -> {
-                                        // 6. Play sound after 10 ticks
-                                        executeSoundCommand(server, commandSourceStack, commandDispatcher, playerName);
-                                    });
-                                });
-                            });
-                        });
-                    });
+                // 6. Play sound after 10 ticks
+                scheduleDelayedTask(server, 10, () -> {
+                    executeSoundCommand(server, commandSourceStack, commandDispatcher, playerName);
+                });
+
+                // 7. Return star to original position after 17 seconds (340 ticks) from last command
+                // 10 ticks (last command) + 340 ticks = 350 ticks total
+                scheduleDelayedTask(server, 350, () -> {
+                    executeStarMovementReturn(server);
                 });
 
                 System.out.println("Event1: Scheduled all effects for player " + playerName);
                 successCount++;
 
             } catch (Exception e) {
+                System.err.println("Event1: Error scheduling effects for player: " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
-        final int finalSuccessCount = successCount;
+        if (successCount > 0) {
+            source.sendSuccess(() -> Component.literal("Started event1 for   players"), true);
+        }
+
         return successCount;
+    }
+
+    private static void scheduleDelayedTask(MinecraftServer server, int delayTicks, Runnable task) {
+        new Thread(() -> {
+            try {
+                // Преобразуем тики в миллисекунды (1 тик = 50 мс)
+                Thread.sleep(delayTicks * 50L);
+
+                // Выполняем задачу в основном потоке сервера
+                server.execute(task);
+            } catch (InterruptedException e) {
+                System.err.println("Event1: Delay thread interrupted: " + e.getMessage());
+            }
+        }).start();
     }
 
     private static void executeLookCommand(MinecraftServer server, CommandSourceStack commandSourceStack,
@@ -119,18 +162,31 @@ public class Event1Command {
                     NetworkDirection.PLAY_TO_CLIENT
             );
         } catch (Exception e) {
+            System.err.println("Event1: Error executing red sky: " + e.getMessage());
         }
     }
 
-    private static void executeStarMovement(MinecraftServer server, CommandSourceStack commandSourceStack,
-                                            CommandDispatcher<CommandSourceStack> commandDispatcher) {
+    private static void executeStarMovementInitial(MinecraftServer server) {
         try {
-            // Move star using star_move command with specific coordinates: -92 -60 -92 for 1200 ticks (60 seconds)
-            String starMoveCommand = "star_move blue_star -92 -60 -92 340";
-            ParseResults<CommandSourceStack> starMoveResults = commandDispatcher.parse(starMoveCommand, commandSourceStack);
-            int starMoveResult = server.getCommands().performCommand(starMoveResults, starMoveCommand);
+            // Перемещаем звезду в новые координаты: RA=45.0f, Dec=90.0f, Distance=20.0f
+            StarManager.applyAbsolutePosition("blue_star", 45.0f, 90.0f, 20.0f, 340);
+
+            System.out.println("Event1: Star moved to new position and synchronized with all clients");
         } catch (Exception e) {
-            System.err.println("Event1: Error moving star: " + e.getMessage());
+            System.err.println("Event1: Error moving star to initial position: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void executeStarMovementReturn(MinecraftServer server) {
+        try {
+            // Возвращаем к исходным координатам: RA=45.0f, Dec=30.0f, Distance=150.0f
+            StarManager.applyAbsolutePosition("blue_star", 45.0f, 30.0f, 150.0f, 1);
+
+            System.out.println("Event1: Star returned to original position and synchronized with all clients");
+        } catch (Exception e) {
+            System.err.println("Event1: Error returning star to original position: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

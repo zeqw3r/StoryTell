@@ -28,9 +28,6 @@ public class HoloCommand {
 
                             // Синхронизируем с клиентами
                             syncConfigWithClients();
-
-                            ctx.getSource().sendSuccess(() ->
-                                    Component.literal("Hologram updated with text: " + text), true);
                             return 1;
                         })));
 
@@ -44,8 +41,6 @@ public class HoloCommand {
                         for (Object e : serverLevel.getAllEntities()) {
                             if (e instanceof HologramEntity) count++;
                         }
-                        ctx.getSource().sendSuccess(() ->
-                                Component.literal("Active holograms: "), true);
                         return count;
                     }
                     return 0;

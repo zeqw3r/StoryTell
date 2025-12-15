@@ -1,4 +1,3 @@
-// ScreenOverlayRenderer.java
 package com.example.storytell.init.renderer;
 
 import com.example.storytell.init.network.ClientEventHandlers;
@@ -43,7 +42,7 @@ public class ScreenOverlayRenderer {
         float red = 1.0f;
         float green = 0.0f;
         float blue = 0.0f;
-        float alpha = 0.25f * intensity; // Увеличено с 0.4f до 0.7f
+        float alpha = 0.25f * intensity;
 
         // Получаем размеры экрана
         Minecraft minecraft = Minecraft.getInstance();

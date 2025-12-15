@@ -94,15 +94,15 @@ public class Event4Command {
                 executeParticleCommand(server, sourceX, sourceY, sourceZ);
             });
 
-            // 9. Через 1 секунду после взрыва (400 тиков) удаляем модель метеора
-            scheduleDelayedTask(server, 395, () -> {
+            // 9. Через 1 секунду после взрыва (414 тиков) удаляем модель метеора
+            scheduleDelayedTask(server, 405, () -> {
                 RemoveWorldModelPacket removePacket = new RemoveWorldModelPacket("m");
                 NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), removePacket);
                 System.out.println("Event4: Meteor model removed 1 second after explosion");
             });
 
-            // 10. Через 1 тик (401 тик) создаем сундук на указанных координатах
-            scheduleDelayedTask(server, 396, () -> {
+            // 10. Через 1 тик (415 тик) создаем сундук на указанных координатах
+            scheduleDelayedTask(server, 415, () -> {
                 executeChestCommand(server, sourceX, sourceY, sourceZ);
             });
 
@@ -116,13 +116,11 @@ public class Event4Command {
         }
     }
 
+    // Остальные методы остаются без изменений
     private static void scheduleDelayedTask(MinecraftServer server, int delayTicks, Runnable task) {
         new Thread(() -> {
             try {
-                // Преобразуем тики в миллисекунды (1 тик = 50 мс)
                 Thread.sleep(delayTicks * 50L);
-
-                // Выполняем задачу в основном потоке сервера
                 server.execute(task);
             } catch (InterruptedException e) {
                 System.err.println("Event4: Delay thread interrupted: " + e.getMessage());
@@ -130,7 +128,6 @@ public class Event4Command {
         }).start();
     }
 
-    // Метод для выполнения команды вращения
     private static void executeRotationCommand(MinecraftServer server) {
         try {
             CommandSourceStack commandSource = server.createCommandSourceStack()
@@ -150,14 +147,12 @@ public class Event4Command {
         }
     }
 
-    // Новый метод для выполнения команды частиц
     private static void executeParticleCommand(MinecraftServer server, int x, int y, int z) {
         try {
             CommandSourceStack commandSource = server.createCommandSourceStack()
                     .withPermission(4)
                     .withSuppressedOutput();
 
-            // Заменяем ~ ~ ~ на конкретные координаты
             String particleCommand = String.format("particle minecraft:campfire_signal_smoke %d %d %d 1 1 1 0.1 1000 force", x, y, z);
             int result = server.getCommands().performPrefixedCommand(commandSource, particleCommand);
 
@@ -173,13 +168,11 @@ public class Event4Command {
 
     private static void executeSoundCommand(MinecraftServer server) {
         try {
-            // Создаем CommandSourceStack с правами для выполнения команды
             CommandSourceStack commandSource = server.createCommandSourceStack()
                     .withPermission(4)
                     .withSuppressedOutput();
 
-            // Выполняем команду звука
-            String soundCommand = "execute as @a at @a run playsound storytell:event4 master @a ~ ~ ~ 20";
+            String soundCommand = "execute as @a at @a run playsound storytell:event4 master @a ~ ~ ~ 999999999 1 1";
             server.getCommands().performPrefixedCommand(commandSource, soundCommand);
 
             System.out.println("Event4: Sound command executed");
@@ -194,7 +187,6 @@ public class Event4Command {
                     .withPermission(4)
                     .withSuppressedOutput();
 
-            // Звук взрыва в координатах взрыва с увеличенной громкостью в 5 раз
             String explosionSoundCommand = String.format("playsound minecraft:entity.generic.explode master @a %d %d %d 20.0 1.0", x, y, z);
             server.getCommands().performPrefixedCommand(commandSource, explosionSoundCommand);
 
@@ -206,20 +198,18 @@ public class Event4Command {
 
     private static void createExplosion(Level level, int x, int y, int z) {
         try {
-            // Создаем взрыв напрямую через API Minecraft для версии 1.20.1
             level.explode(
-                    null, // Источник взрыва (null - нет источника)
-                    (double) x, (double) y, (double) z, // Координаты
-                    10.0f, // Сила взрыва
-                    true, // Создает огонь
-                    Level.ExplosionInteraction.TNT // Тип взрыва - как у TNT
+                    null,
+                    (double) x, (double) y, (double) z,
+                    10.0f,
+                    true,
+                    Level.ExplosionInteraction.TNT
             );
 
             System.out.println("Event4: Explosion created at " + x + " " + y + " " + z);
         } catch (Exception e) {
             System.err.println("Event4: Error creating explosion: " + e.getMessage());
 
-            // Fallback: попробуем команду explode с правильным форматом
             try {
                 CommandSourceStack commandSource = level.getServer().createCommandSourceStack()
                         .withPermission(4)
@@ -253,7 +243,6 @@ public class Event4Command {
                             "{Count:1b,Slot:12b,id:\"minecraft:oak_planks\"}," +
                             "{Count:1b,Slot:13b,id:\"minecraft:redstone\"}," +
                             "{Count:1b,Slot:14b,id:\"minecraft:oak_planks\"}," +
-                            "{Count:1b,Slot:16b,id:\"storytell:radio\"}," +
                             "{Count:1b,Slot:21b,id:\"minecraft:oak_planks\"}," +
                             "{Count:1b,Slot:22b,id:\"minecraft:note_block\"}," +
                             "{Count:1b,Slot:23b,id:\"minecraft:oak_planks\"}" +

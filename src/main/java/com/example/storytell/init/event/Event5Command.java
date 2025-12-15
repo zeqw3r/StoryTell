@@ -97,7 +97,7 @@ public class Event5Command {
             });
 
             // 9. Через 1 секунду после взрыва (400 тиков) удаляем модель метеора
-            scheduleDelayedTask(server, 395, () -> {
+            scheduleDelayedTask(server, 405, () -> {
                 RemoveWorldModelPacket removePacket = new RemoveWorldModelPacket("m");
                 NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), removePacket);
                 System.out.println("Event5: Meteor model removed 1 second after explosion");
@@ -177,7 +177,7 @@ public class Event5Command {
     private static void executeTabletSound(Level level, int x, int y, int z) {
         try {
             // Воспроизводим звук на уровне для всех игроков
-            level.playSound(null, x, y, z, ModSounds.EVENT4.get(), SoundSource.PLAYERS, 20.0F, 1.0F);
+            level.playSound(null, x, y, z, ModSounds.EVENT4.get(), SoundSource.PLAYERS, 99999999.0F, 1.0F);
             System.out.println("Event5: Tablet sound played successfully");
         } catch (Exception e) {
             System.err.println("Event5: Error playing tablet sound: " + e.getMessage());
@@ -244,7 +244,6 @@ public class Event5Command {
                             "{Count:1b,Slot:12b,id:\"minecraft:copper_block\"}," +
                             "{Count:1b,Slot:13b,id:\"immersiveengineering:transformer_hv\"}," +
                             "{Count:1b,Slot:14b,id:\"minecraft:copper_block\"}," +
-                            "{Count:1b,Slot:16b,id:\"storytell:upgrade_transmitter\"}," +
                             "{Count:1b,Slot:21b,id:\"minecraft:netherite_ingot\"}," +
                             "{Count:1b,Slot:22b,id:\"immersiveengineering:capacitor_hv\"}," +
                             "{Count:1b,Slot:23b,id:\"minecraft:netherite_ingot\"}" +

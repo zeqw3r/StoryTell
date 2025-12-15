@@ -1,4 +1,3 @@
-// HologramRenderer.java
 package com.example.storytell.init.blocks;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -14,12 +13,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import com.mojang.math.Axis;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 
+@OnlyIn(Dist.CLIENT)
 public class HologramRenderer extends EntityRenderer<HologramEntity> {
 
-    // Кэшированные константы для оптимизации
     private static final float WIDTH = 3.0f;
     private static final float HEIGHT = 2.0f;
     private static final float HALF_WIDTH = WIDTH / 2.0f;
@@ -54,10 +55,8 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
         poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
 
-        // Рендерим текстуру голограммы
         renderTexture(poseStack, bufferSource, textureLocation, packedLight, animationProgress);
 
-        // Рендерим текст, если он есть
         String text = entity.getDisplayText();
         if (text != null && !text.isEmpty()) {
             renderText(poseStack, bufferSource, text, packedLight);
@@ -68,19 +67,14 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
 
     private void renderTexture(PoseStack poseStack, MultiBufferSource bufferSource,
                                ResourceLocation textureLocation, int packedLight, float animationProgress) {
-        // Используем полупрозрачный RenderType с поддержкой альфа-канала
         VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(textureLocation));
         PoseStack.Pose pose = poseStack.last();
 
-        // Устанавливаем полупрозрачность (альфа-канал)
         int alpha = (int)(255 * animationProgress);
-
-        // Добавляем голубоватый оттенок для эффекта голограммы
         int r = (int)(255 * 0.9f);
         int g = 255;
         int b = Math.min(255, (int)(255 * 1.1f));
 
-        // Рендерим квадрат - оптимизированная версия
         renderQuad(vertexConsumer, pose, r, g, b, alpha, packedLight);
     }
 
@@ -135,7 +129,6 @@ public class HologramRenderer extends EntityRenderer<HologramEntity> {
         for (FormattedCharSequence line : lines) {
             float textWidth = font.width(line) / 2.0F;
 
-            // Рисуем текст
             font.drawInBatch(
                     line,
                     -textWidth,

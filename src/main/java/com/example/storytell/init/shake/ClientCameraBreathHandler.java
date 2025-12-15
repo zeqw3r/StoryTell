@@ -56,16 +56,15 @@ public class ClientCameraBreathHandler {
 
         if (progress < 0.9f) {
             // Фаза 1: плавное уменьшение FOV (90% времени)
-            // Используем квадратичную функцию для плавного ускорения/замедления
-            float phaseProgress = progress / 0.9f; // Нормализуем до 0-1 для первой фазы
+            float phaseProgress = progress / 0.9f;
             fovChange = easeInOutQuad(phaseProgress) * targetPower * 25f;
         } else {
             // Фаза 2: плавное возвращение к исходному FOV (последние 10% времени)
-            float phaseProgress = (progress - 0.9f) / 0.1f; // Нормализуем до 0-1 для второй фазы
+            float phaseProgress = (progress - 0.9f) / 0.1f;
             fovChange = (1f - easeInOutQuad(phaseProgress)) * targetPower * 25f;
         }
 
-        // Применяем изменение FOV (уменьшение FOV = приближение)
+        // Применяем изменение FOV
         float newFOV = originalFOV - fovChange;
 
         // Ограничиваем FOV в разумных пределах
@@ -77,16 +76,6 @@ public class ClientCameraBreathHandler {
     // Функция плавного ускорения и замедления
     private static float easeInOutQuad(float x) {
         return x < 0.5f ? 2 * x * x : 1 - (float)Math.pow(-2 * x + 2, 2) / 2;
-    }
-
-    // Функция плавного начала
-    private static float easeOutQuad(float x) {
-        return 1 - (1 - x) * (1 - x);
-    }
-
-    // Функция плавного окончания
-    private static float easeInQuad(float x) {
-        return x * x;
     }
 
     public static boolean isActive() {

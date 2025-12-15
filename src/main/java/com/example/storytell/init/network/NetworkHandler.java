@@ -1,6 +1,7 @@
 // NetworkHandler.java
 package com.example.storytell.init.network;
 
+import com.example.storytell.init.altar.network.SummoningAltarSelectPacket;
 import com.example.storytell.init.blocks.UpgradeTransmitterCommandPacket;
 import com.example.storytell.init.shake.CameraBreathPacket;
 import net.minecraft.resources.ResourceLocation;
@@ -36,9 +37,14 @@ public class NetworkHandler {
         INSTANCE.registerMessage(id++, StarColorAnimationPacket.class, StarColorAnimationPacket::encode, StarColorAnimationPacket::decode, StarColorAnimationPacket::handle); // Добавлен пакет анимации цвета
 
         // Пакеты для синхронизации голограмм
+        INSTANCE.registerMessage(id++, SyncHologramTextPacket.class, SyncHologramTextPacket::encode, SyncHologramTextPacket::decode, SyncHologramTextPacket::handle);
         INSTANCE.registerMessage(id++, SyncHologramTexturePacket.class, SyncHologramTexturePacket::encode, SyncHologramTexturePacket::decode, SyncHologramTexturePacket::handle);
         INSTANCE.registerMessage(id++, SyncHologramLockPacket.class, SyncHologramLockPacket::encode, SyncHologramLockPacket::decode, SyncHologramLockPacket::handle);
         INSTANCE.registerMessage(id++, SyncHologramAmbientSoundPacket.class, SyncHologramAmbientSoundPacket::encode, SyncHologramAmbientSoundPacket::decode, SyncHologramAmbientSoundPacket::handle);
-        INSTANCE.registerMessage(id++, SyncHologramTextPacket.class, SyncHologramTextPacket::toBytes, SyncHologramTextPacket::new, SyncHologramTextPacket::handle);
+        INSTANCE.registerMessage(id++, SyncAllStarsPacket.class, SyncAllStarsPacket::encode, SyncAllStarsPacket::decode, SyncAllStarsPacket::handle);
+        INSTANCE.registerMessage(id++, SummoningAltarSelectPacket.class,
+                SummoningAltarSelectPacket::encode, SummoningAltarSelectPacket::decode,
+                SummoningAltarSelectPacket::handle);
+        INSTANCE.registerMessage(id++, StarAbsolutePositionPacket.class, StarAbsolutePositionPacket::encode, StarAbsolutePositionPacket::decode, StarAbsolutePositionPacket::handle);
     }
 }

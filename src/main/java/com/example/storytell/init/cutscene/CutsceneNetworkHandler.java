@@ -1,4 +1,3 @@
-// CutsceneNetworkHandler.java
 package com.example.storytell.init.cutscene;
 
 import net.minecraft.resources.ResourceLocation;

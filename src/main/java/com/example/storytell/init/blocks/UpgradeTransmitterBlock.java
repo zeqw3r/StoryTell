@@ -22,6 +22,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.DistExecutor;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -29,21 +32,13 @@ public class UpgradeTransmitterBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    // Точный хитбокс, соответствующий модели из upgrade_transmitter.json
     private static final VoxelShape SHAPE = Shapes.or(
-            // Основание (нижняя часть)
             Block.box(1.0D, 0.0D, 1.0D, 15.0D, 5.0D, 15.0D),
-            // Средняя часть
             Block.box(2.0D, 5.0D, 2.0D, 14.0D, 7.0D, 14.0D),
-            // Верхняя центральная колонна
             Block.box(5.0D, 6.0D, 5.0D, 11.0D, 12.0D, 11.0D),
-            // Верхняя декоративная часть
             Block.box(4.0D, 6.0D, 4.0D, 12.0D, 9.0D, 12.0D),
-            // Верхний шпиль
             Block.box(6.0D, 10.0D, 6.0D, 10.0D, 15.0D, 10.0D),
-            // Самый верхний элемент
             Block.box(7.0D, 14.0D, 7.0D, 9.0D, 16.0D, 9.0D),
-            // Боковые стороны основания
             Block.box(0.0D, 0.0D, 2.0D, 1.0D, 3.0D, 14.0D),
             Block.box(15.0D, 0.0D, 2.0D, 16.0D, 3.0D, 14.0D),
             Block.box(2.0D, 0.0D, 0.0D, 14.0D, 3.0D, 1.0D),
@@ -63,7 +58,6 @@ public class UpgradeTransmitterBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        // Блок будет ориентирован в сторону, куда смотрит игрок при установке
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
@@ -114,9 +108,18 @@ public class UpgradeTransmitterBlock extends Block implements EntityBlock {
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) {
-            // Открываем GUI на клиенте
-            net.minecraft.client.Minecraft.getInstance().setScreen(new UpgradeTransmitterScreen(pos));
+            // Безопасное открытие экрана только на клиенте
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                openClientScreen(pos);
+            });
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private void openClientScreen(BlockPos pos) {
+        net.minecraft.client.Minecraft.getInstance().setScreen(
+                new com.example.storytell.init.blocks.client.UpgradeTransmitterScreen(pos)
+        );
     }
 }

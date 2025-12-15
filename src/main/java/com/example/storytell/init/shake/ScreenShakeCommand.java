@@ -1,4 +1,3 @@
-// ScreenShakeCommand.java (упрощенная версия)
 package com.example.storytell.init.shake;
 
 import com.mojang.brigadier.CommandDispatcher;

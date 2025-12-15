@@ -58,7 +58,7 @@ public class Event9Command {
 
             for (ServerPlayer player : players) {
                 String soundCommand = String.format(
-                        "execute as %s at %s run playsound storytell:event9 master %s ~ ~ ~ 20.0 1.0",
+                        "execute as %s at %s run playsound storytell:event9 master %s ~ ~ ~ 9999999999999.0 1.0",
                         player.getScoreboardName(),
                         player.getScoreboardName(),
                         player.getScoreboardName()

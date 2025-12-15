@@ -8,7 +8,6 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.server.ServerLifecycleHooks;
-import org.checkerframework.checker.units.qual.C;
 import org.joml.Vector2f;
 
 import java.util.*;

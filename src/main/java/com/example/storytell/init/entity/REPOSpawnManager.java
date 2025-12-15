@@ -21,13 +21,13 @@ public class REPOSpawnManager {
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final Map<UUID, Long> playerCooldowns = new ConcurrentHashMap<>();
-    private static final long SPAWN_COOLDOWN = 5 * 60 * 1000;
+    private static final long SPAWN_COOLDOWN = 5 * 60 * 10;
     private static final Random random = new Random();
     private static UUID activeRepoUUID = null;
 
     // Оптимизация: кэш для проверки существования REPO
     private static Long lastRepoSweepTime = null;
-    private static final long REPO_SWEEP_INTERVAL = 10000; // 10 секунд
+    private static final long REPO_SWEEP_INTERVAL = 100; // 10 секунд
     private static Boolean repoExistsCache = null;
 
     @SubscribeEvent
@@ -39,7 +39,7 @@ public class REPOSpawnManager {
         }
 
         // Увеличиваем интервал проверки для производительности
-        if (event.getServer().getTickCount() % 400 != 0) return; // Каждые 20 секунд вместо 10
+        if (event.getServer().getTickCount() % 200 != 0) return; // Каждые 20 секунд вместо 10
 
         // Используем кэшированную проверку существования REPO
         if (!shouldSpawnNewRepo(event.getServer())) {
@@ -184,7 +184,7 @@ public class REPOSpawnManager {
         // Оптимизированный поиск позиции с кэшированием высоты
         for (int attempt = 0; attempt < 15; attempt++) { // Уменьшено с 20 до 15 попыток
             double angle = random.nextDouble() * 2 * Math.PI;
-            double distance = 20 + random.nextDouble() * 80;
+            double distance = 20 + random.nextDouble() * 40;
 
             double x = playerPos.x + Math.cos(angle) * distance;
             double z = playerPos.z + Math.sin(angle) * distance;

@@ -1,8 +1,8 @@
-// StoryTell.java
 package com.example.storytell;
 
 import com.example.storytell.init.HologramConfig;
-import com.example.storytell.init.boss.BossCommands;
+import com.example.storytell.init.altar.ModAltarBlocks;
+import com.example.storytell.init.altar.ModAltarContainers;
 import com.example.storytell.init.blocks.*;
 import com.example.storytell.init.cutscene.CutsceneCommand;
 import com.example.storytell.init.cutscene.CutsceneNetworkHandler;
@@ -43,60 +43,60 @@ public class StoryTell {
     public StoryTell() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-        // Инициализируем конфиг
         HologramConfig.init();
 
-        // Регистрируем все компоненты в правильном порядке
         ModEntities.ENTITY_TYPES.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
-        CutsceneNetworkHandler.register();
-
-        // Регистрируем обработчики событий
-        MinecraftForge.EVENT_BUS.register(this);
 
         ModRadioBlocks.BLOCKS.register(modEventBus);
         ModRadioBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModRadioItems.ITEMS.register(modEventBus);
 
-        NetworkHandler.register();
+        MinecraftForge.EVENT_BUS.register(this);
+
         modEventBus.addListener(this::commonSetup);
+        ModAltarContainers.CONTAINERS.register(modEventBus);
+        ModAltarBlocks.BLOCKS.register(modEventBus);
+        ModAltarBlocks.BLOCK_ENTITIES.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             CutsceneNetworkHandler.register();
             NetworkHandler.register();
-            System.out.println("StoryTell mod common setup completed");
+            LOGGER.info("StoryTell mod common setup completed");
         });
     }
 
     @SubscribeEvent
     public void registerCommands(RegisterCommandsEvent event) {
-        HoloCommand.register(event.getDispatcher());
-        BossCommands.register(event.getDispatcher());
-        RadioCommand.register(event.getDispatcher());
-        CutsceneCommand.register(event.getDispatcher());
-        OrbitalStrikeCommand.register(event.getDispatcher());
-        ScreenShakeCommand.register(event.getDispatcher());
-        Event1Command.register(event.getDispatcher());
-        StarMoveCommand.register(event.getDispatcher());
-        CameraBreathCommand.register(event.getDispatcher());
-        StarVisibilityCommand.register(event.getDispatcher());
-        Event2Command.register(event.getDispatcher());
-        RepoSpawnCommand.register(event.getDispatcher());
-        Event3Command.register(event.getDispatcher());
-        WorldModelCommand.register(event.getDispatcher());
-        Event4Command.register(event.getDispatcher());
-        Event5Command.register(event.getDispatcher());
-        Event6Command.register(event.getDispatcher());
-        Event7Command.register(event.getDispatcher());
-        Event8Command.register(event.getDispatcher());
-        Event9Command.register(event.getDispatcher());
-        Event10Command.register(event.getDispatcher());
-        Event11Command.register(event.getDispatcher());
-        TabletCommand.register(event.getDispatcher());
+        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+
+        HoloCommand.register(dispatcher);
+        RadioCommand.register(dispatcher);
+        CutsceneCommand.register(dispatcher);
+        OrbitalStrikeCommand.register(dispatcher);
+        ScreenShakeCommand.register(dispatcher);
+        Event1Command.register(dispatcher);
+        StarMoveCommand.register(dispatcher);
+        CameraBreathCommand.register(dispatcher);
+        StarVisibilityCommand.register(dispatcher);
+        Event2Command.register(dispatcher);
+        RepoSpawnCommand.register(dispatcher);
+        Event3Command.register(dispatcher);
+        WorldModelCommand.register(dispatcher);
+        Event4Command.register(dispatcher);
+        Event5Command.register(dispatcher);
+        Event6Command.register(dispatcher);
+        Event7Command.register(dispatcher);
+        Event8Command.register(dispatcher);
+        Event9Command.register(dispatcher);
+        Event10Command.register(dispatcher);
+        Event11Command.register(dispatcher);
+        TabletCommand.register(dispatcher);
+        MeteorCommand.register(dispatcher);
     }
 }

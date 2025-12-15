@@ -23,13 +23,15 @@ public class CustomStar {
     private int color; // Убрали final
 
     // Celestial coordinates
-    private final float rightAscension;
-    private final float declination;
-    private final float distance;
+    private float rightAscension;
+    private float declination;
+    private float distance;
 
     // Position fields
     private float x, y, z;
-    private final float baseX, baseY, baseZ;
+    private float baseX;
+    private float baseY;
+    private float baseZ;
 
     // Animation properties
     private float rotationAngle = 0.0f;
@@ -146,7 +148,7 @@ public class CustomStar {
         RenderSystem.disableBlend();
     }
 
-    private void calculatePosition() {
+    void calculatePosition() {
         double raRad = Math.toRadians(rightAscension);
         double decRad = Math.toRadians(declination);
 
@@ -219,30 +221,43 @@ public class CustomStar {
     }
 
     private void updatePositionWithModifiers() {
-        this.x = baseX;
-        this.y = baseY;
-        this.z = baseZ;
+        try {
+            // Сначала устанавливаем базовую позицию
+            this.x = baseX;
+            this.y = baseY;
+            this.z = baseZ;
 
-        List<StarModifierManager.StarModifier> modifiers = StarModifierManager.getModifiers(name);
-        for (StarModifierManager.StarModifier modifier : modifiers) {
-            if (modifier.isSmoothMove() && modifier.getType().equals("smooth_move")) {
-                float progress = modifier.getProgress();
-                float easedProgress = calculateEasing(progress, modifier.getEasingType());
+            // Создаем копию списка модификаторов для безопасной итерации
+            List<StarModifierManager.StarModifier> modifiers = new ArrayList<>(StarModifierManager.getModifiers(name));
 
-                this.x = modifier.getStartX() + (modifier.getTargetX() - modifier.getStartX()) * easedProgress;
-                this.y = modifier.getStartY() + (modifier.getTargetY() - modifier.getStartY()) * easedProgress;
-                this.z = modifier.getStartZ() + (modifier.getTargetZ() - modifier.getStartZ()) * easedProgress;
-            } else if (modifier.getType().equals("offset")) {
-                this.x += modifier.getX();
-                this.y += modifier.getY();
-                this.z += modifier.getZ();
-            } else if (modifier.getType().equals("player_position")) {
-                this.y = modifier.getY();
+            for (StarModifierManager.StarModifier modifier : modifiers) {
+                if (modifier.isSmoothMove() && modifier.getType().equals("smooth_move")) {
+                    float progress = modifier.getProgress();
+                    float easedProgress = calculateEasing(progress, modifier.getEasingType());
+
+                    this.x = modifier.getStartX() + (modifier.getTargetX() - modifier.getStartX()) * easedProgress;
+                    this.y = modifier.getStartY() + (modifier.getTargetY() - modifier.getStartY()) * easedProgress;
+                    this.z = modifier.getStartZ() + (modifier.getTargetZ() - modifier.getStartZ()) * easedProgress;
+                } else if (modifier.getType().equals("offset")) {
+                    this.x += modifier.getX();
+                    this.y += modifier.getY();
+                    this.z += modifier.getZ();
+                } else if (modifier.getType().equals("player_position")) {
+                    this.y = modifier.getY();
+                } else if (modifier.getType().equals("absolute")) {
+                    this.x = modifier.getX();
+                    this.y = modifier.getY();
+                    this.z = modifier.getZ();
+                }
             }
-        }
 
-        this.activeModifiers.clear();
-        this.activeModifiers.addAll(modifiers);
+            // Обновляем activeModifiers (используется только для отладки)
+            this.activeModifiers.clear();
+            this.activeModifiers.addAll(modifiers);
+        } catch (Exception e) {
+            System.err.println("Error in updatePositionWithModifiers for star " + name + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private float calculateEasing(float progress, String easingType) {
@@ -317,10 +332,33 @@ public class CustomStar {
     }
 
     public void resetToBasePosition() {
-        this.x = baseX;
-        this.y = baseY;
-        this.z = baseZ;
-        StarModifierManager.removeModifiers(name);
+        try {
+            // Полностью очищаем модификаторы
+            StarModifierManager.removeModifiers(this.name);
+
+            // Восстанавливаем исходные координаты через calculatePosition()
+            calculatePosition();
+
+            System.out.println("Star " + name + " reset to base position: " + x + ", " + y + ", " + z);
+        } catch (Exception e) {
+            System.err.println("Error in resetToBasePosition for star " + name + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void setCelestialCoordinates(float rightAscension, float declination, float distance) {
+        // Обновляем базовые небесные координаты
+        this.rightAscension = rightAscension;
+        this.declination = declination;
+        this.distance = distance;
+
+        // Пересчитываем базовую позицию
+        calculatePosition();
+
+        // Обновляем baseX, baseY, baseZ
+        this.baseX = this.x;
+        this.baseY = this.y;
+        this.baseZ = this.z;
     }
 
     // Visibility methods

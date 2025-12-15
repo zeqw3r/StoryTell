@@ -8,9 +8,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.network.PacketDistributor;
-import com.example.storytell.init.network.NetworkHandler;
-import com.example.storytell.init.network.StarMovePacket;
 
 public class StarMoveCommand {
 
@@ -34,6 +31,22 @@ public class StarMoveCommand {
                                         )
                                 )
                         )
+                        // Новая подкоманда для абсолютного перемещения
+                        .then(Commands.literal("absolute")
+                                .then(Commands.argument("rightAscension", FloatArgumentType.floatArg())
+                                        .then(Commands.argument("declination", FloatArgumentType.floatArg())
+                                                .then(Commands.argument("distance", FloatArgumentType.floatArg())
+                                                        .executes(context -> executeStarAbsolute(
+                                                                context.getSource(),
+                                                                StringArgumentType.getString(context, "starName"),
+                                                                FloatArgumentType.getFloat(context, "rightAscension"),
+                                                                FloatArgumentType.getFloat(context, "declination"),
+                                                                FloatArgumentType.getFloat(context, "distance")
+                                                        ))
+                                                )
+                                        )
+                                )
+                        )
                 ));
     }
 
@@ -45,6 +58,16 @@ public class StarMoveCommand {
 
         source.sendSuccess(() -> Component.literal("Applied movement to star " + starName +
                 " with offset (" + offsetX + ", " + offsetY + ", " + offsetZ + ") for " + duration + " ticks"), true);
+        return 1;
+    }
+
+    // Новый метод для абсолютного перемещения (навсегда)
+    private static int executeStarAbsolute(CommandSourceStack source, String starName, float rightAscension, float declination, float distance) {
+        // Используем duration = 1 для постоянного позиционирования
+        StarManager.applyAbsolutePosition(starName, rightAscension, declination, distance, 1);
+
+        source.sendSuccess(() -> Component.literal("Permanently set star " + starName +
+                " to RA=" + rightAscension + ", Dec=" + declination + ", Dist=" + distance), true);
         return 1;
     }
 }

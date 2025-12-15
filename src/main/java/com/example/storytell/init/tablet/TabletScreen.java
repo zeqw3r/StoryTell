@@ -1,11 +1,13 @@
-// TabletScreen.java
 package com.example.storytell.init.tablet;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
+@OnlyIn(Dist.CLIENT)
 public class TabletScreen extends Screen {
     private final String imagePath;
     private ResourceLocation imageTexture;
@@ -23,27 +25,23 @@ public class TabletScreen extends Screen {
 
     private void loadImageTexture() {
         try {
-            // Прямое создание ResourceLocation из строки
+            // Безопасное создание ResourceLocation
             this.imageTexture = new ResourceLocation(imagePath);
 
-            // Проверяем существование текстуры
-            if (!checkTextureExists(imageTexture)) {
-                // Если текстура не найдена, используем стандартную
-                this.imageTexture = new ResourceLocation("storytell:textures/gui/tablet/default.png");
+            // Проверяем существование текстуры с обработкой ошибок
+            if (minecraft != null && minecraft.getResourceManager() != null) {
+                try {
+                    var resource = minecraft.getResourceManager().getResource(imageTexture);
+                    if (resource.isEmpty()) {
+                        throw new RuntimeException("Resource not found");
+                    }
+                } catch (Exception e) {
+                    this.imageTexture = new ResourceLocation("storytell:textures/gui/tablet/default.png");
+                }
             }
         } catch (Exception e) {
-            // В случае ошибки используем стандартную текстуру
-            this.imageTexture = new ResourceLocation("storytell:textures/gui/tablet/default.png");
-        }
-    }
 
-    private boolean checkTextureExists(ResourceLocation texture) {
-        try {
-            // Пытаемся загрузить текстуру для проверки её существования
-            minecraft.getTextureManager().getTexture(texture);
-            return true;
-        } catch (Exception e) {
-            return false;
+            this.imageTexture = new ResourceLocation("storytell:textures/gui/tablet/default.png");
         }
     }
 
@@ -68,15 +66,21 @@ public class TabletScreen extends Screen {
         if (imageTexture == null) return;
 
         try {
-            // Базовые размеры изображения увеличены на 10%
-            // Было: 384×256 пикселей
-            // Стало: 422×282 пикселей (увеличение на 10%)
+            // Базовые размеры изображения
             int baseWidth = 1920;
             int baseHeight = 1080;
 
             // Ограничиваем максимальный размер экраном
             int imageWidth = Math.min(baseWidth, this.width - 20);
             int imageHeight = Math.min(baseHeight, this.height - 20);
+
+            // Сохраняем пропорции
+            float aspectRatio = (float) baseWidth / baseHeight;
+            if ((float) imageWidth / imageHeight > aspectRatio) {
+                imageWidth = (int) (imageHeight * aspectRatio);
+            } else {
+                imageHeight = (int) (imageWidth / aspectRatio);
+            }
 
             // Центрируем изображение
             int x = (this.width - imageWidth) / 2;
@@ -85,7 +89,6 @@ public class TabletScreen extends Screen {
             // Рендерим изображение
             guiGraphics.blit(imageTexture, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
         } catch (Exception e) {
-            // В случае ошибки рендеринга, просто не отображаем изображение
         }
     }
 

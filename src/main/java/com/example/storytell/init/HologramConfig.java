@@ -1,10 +1,11 @@
-// HologramConfig.java
 package com.example.storytell.init;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 import java.nio.file.Files;
@@ -45,10 +46,17 @@ public class HologramConfig {
         boolean hologramLocked = false;
 
         List<String> bossList = new ArrayList<>(Arrays.asList(
-                "fdbosses:chesed", "fdbosses:malkuth", "cataclysm:scylla", "cataclysm:maledictus",
+                "cataclysm:scylla", "cataclysm:maledictus",
                 "cataclysm:ancient_remnant", "cataclysm:ender_guardian", "cataclysm:the_leviathan",
                 "cataclysm:the_harbinger", "cataclysm:ignis", "cataclysm:netherite_monstrosity",
                 "minecraft:ender_dragon", "minecraft:wither"
+        ));
+
+        // Новое поле для хранения баффов боссов
+        List<BossEffectConfig> bossEffects = new ArrayList<>(Arrays.asList(
+                new BossEffectConfig("minecraft:strength", 3, -1, false, false),
+                new BossEffectConfig("minecraft:resistance", 1, -1, false, false),
+                new BossEffectConfig("minecraft:regeneration", 1, -1, false, false)
         ));
 
         Set<String> seenPlayers = new HashSet<>();
@@ -77,6 +85,25 @@ public class HologramConfig {
             this.rightAscension = rightAscension;
             this.declination = declination;
             this.distance = distance;
+        }
+    }
+
+    // Новый класс для конфигурации эффектов боссов
+    public static class BossEffectConfig {
+        public String effect;
+        public int amplifier;
+        public int duration;
+        public boolean ambient;
+        public boolean showParticles;
+
+        public BossEffectConfig() {}
+
+        public BossEffectConfig(String effect, int amplifier, int duration, boolean ambient, boolean showParticles) {
+            this.effect = effect;
+            this.amplifier = amplifier;
+            this.duration = duration;
+            this.ambient = ambient;
+            this.showParticles = showParticles;
         }
     }
 
@@ -119,6 +146,13 @@ public class HologramConfig {
         if (configData.pendingPlayers == null) configData.pendingPlayers = new HashSet<>();
         if (configData.hologramAmbientSound == null) configData.hologramAmbientSound = "storytell:hologram_ambient";
         if (configData.hologramText == null) configData.hologramText = "";
+        if (configData.bossEffects == null) {
+            configData.bossEffects = new ArrayList<>(Arrays.asList(
+                    new BossEffectConfig("minecraft:strength", 3, -1, false, false),
+                    new BossEffectConfig("minecraft:resistance", 1, -1, false, false),
+                    new BossEffectConfig("minecraft:regeneration", 1, -1, false, false)
+            ));
+        }
     }
 
     private static void saveConfig() {
@@ -129,6 +163,48 @@ public class HologramConfig {
             String json = GSON.toJson(configData);
             Files.writeString(configFile, json);
         } catch (Exception e) {}
+    }
+
+    // Новые методы для управления эффектами боссов
+    public static List<BossEffectConfig> getBossEffects() {
+        if (!initialized) init();
+        return new ArrayList<>(configData.bossEffects);
+    }
+
+    public static void setBossEffects(List<BossEffectConfig> effects) {
+        if (!initialized) init();
+        configData.bossEffects = new ArrayList<>(effects);
+        saveConfig();
+    }
+
+    public static boolean addBossEffect(BossEffectConfig effect) {
+        if (!initialized) init();
+        try {
+            // Проверяем, существует ли эффект
+            ResourceLocation effectId = new ResourceLocation(effect.effect);
+            if (ForgeRegistries.MOB_EFFECTS.containsKey(effectId)) {
+                configData.bossEffects.add(effect);
+                saveConfig();
+                return true;
+            }
+        } catch (Exception e) {}
+        return false;
+    }
+
+    public static boolean removeBossEffect(int index) {
+        if (!initialized) init();
+        if (index >= 0 && index < configData.bossEffects.size()) {
+            configData.bossEffects.remove(index);
+            saveConfig();
+            return true;
+        }
+        return false;
+    }
+
+    public static void clearBossEffects() {
+        if (!initialized) init();
+        configData.bossEffects.clear();
+        saveConfig();
     }
 
     // Геттеры и сеттеры
@@ -213,7 +289,6 @@ public class HologramConfig {
     public static ResourceLocation getHologramTextureClient() { return new ResourceLocation(clientHologramTexture); }
     public static String getHologramTextClient() { return clientHologramText; }
 
-    // Остальные методы остаются без изменений (только геттеры/сеттеры)
     public static List<String> getBossList() {
         if (!initialized) init();
         return new ArrayList<>(configData.bossList);
@@ -428,8 +503,8 @@ public class HologramConfig {
 
     public static String getConfigSummary() {
         if (!initialized) init();
-        return String.format("HologramConfig: texture=%s, text=%s, textMode=%s, locked=%s, ambientSound=%s",
+        return String.format("HologramConfig: texture=%s, text=%s, textMode=%s, locked=%s, ambientSound=%s, bossEffects=%d",
                 configData.hologramTexture, configData.hologramText, configData.textMode,
-                configData.hologramLocked, configData.hologramAmbientSound);
+                configData.hologramLocked, configData.hologramAmbientSound, configData.bossEffects.size());
     }
 }

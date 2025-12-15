@@ -7,13 +7,14 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Mod.EventBusSubscriber(modid = "storytell")
 public class StarModifierManager {
     private static final Map<String, List<StarModifier>> ACTIVE_MODIFIERS = new ConcurrentHashMap<>();
 
     public static void addModifier(String starName, StarModifier modifier) {
-        ACTIVE_MODIFIERS.computeIfAbsent(starName, k -> new ArrayList<>()).add(modifier);
+        ACTIVE_MODIFIERS.computeIfAbsent(starName, k -> new CopyOnWriteArrayList<>()).add(modifier);
     }
 
     public static void removeModifiers(String starName) {
@@ -21,7 +22,7 @@ public class StarModifierManager {
     }
 
     public static List<StarModifier> getModifiers(String starName) {
-        return ACTIVE_MODIFIERS.getOrDefault(starName, new ArrayList<>());
+        return ACTIVE_MODIFIERS.getOrDefault(starName, new CopyOnWriteArrayList<>());
     }
 
     @SubscribeEvent
@@ -32,13 +33,24 @@ public class StarModifierManager {
     }
 
     private static void updateModifiers() {
+        // Используем итератор для безопасного удаления
         Iterator<Map.Entry<String, List<StarModifier>>> iterator = ACTIVE_MODIFIERS.entrySet().iterator();
 
         while (iterator.hasNext()) {
             Map.Entry<String, List<StarModifier>> entry = iterator.next();
             List<StarModifier> modifiers = entry.getValue();
 
-            modifiers.removeIf(StarModifier::shouldRemove);
+            // Создаем копию списка для безопасной итерации
+            List<StarModifier> modifiersCopy = new ArrayList<>(modifiers);
+            Iterator<StarModifier> modifierIterator = modifiersCopy.iterator();
+
+            while (modifierIterator.hasNext()) {
+                StarModifier modifier = modifierIterator.next();
+                if (modifier.shouldRemove()) {
+                    // Удаляем из оригинального списка
+                    modifiers.remove(modifier);
+                }
+            }
 
             if (modifiers.isEmpty()) {
                 iterator.remove();

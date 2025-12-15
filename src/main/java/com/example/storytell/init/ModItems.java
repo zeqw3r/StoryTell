@@ -1,6 +1,8 @@
 // ModItems.java
 package com.example.storytell.init;
 
+import com.example.storytell.init.altar.ModAltarBlocks;
+import com.example.storytell.init.altar.SummoningAltarBlockItem;
 import com.example.storytell.init.blocks.ModBlocks;
 import com.example.storytell.init.blocks.UpgradeTransmitterBlockItem;
 import com.example.storytell.init.item.RobotShard;
@@ -22,5 +24,11 @@ public class ModItems {
                     new UpgradeTransmitterBlockItem(ModBlocks.UPGRADE_TRANSMITTER_BLOCK.get(),
                             new Item.Properties()));
     public static final RegistryObject<Item> NEWS_TABLET = ITEMS.register("news_tablet",
-            () -> new NewsTabletItem(new Item.Properties().stacksTo(1)));
+            () -> new NewsTabletItem(new Item.Properties()
+                    .stacksTo(1)
+            ));
+    public static final RegistryObject<Item> SUMMONING_ALTAR_BLOCK_ITEM =
+            ITEMS.register("summoning_altar", () ->
+                    new SummoningAltarBlockItem(ModAltarBlocks.SUMMONING_ALTAR_BLOCK.get(),
+                            new Item.Properties()));
 }

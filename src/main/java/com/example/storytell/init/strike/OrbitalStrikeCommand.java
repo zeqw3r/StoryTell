@@ -169,8 +169,8 @@ public class OrbitalStrikeCommand {
         level.explode(
                 null,
                 center.x, center.y, center.z,
-                10.0F,
-                true,
+                3.0F,
+                false,
                 Level.ExplosionInteraction.BLOCK
         );
 

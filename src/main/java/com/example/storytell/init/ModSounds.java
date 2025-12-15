@@ -63,8 +63,26 @@ public class ModSounds {
             registerSoundEvent("event8");
     public static final RegistryObject<SoundEvent> EVENT9 =
             registerSoundEvent("event9");
+    public static final RegistryObject<SoundEvent> EVENT10 =
+            registerSoundEvent("event10");
     public static final RegistryObject<SoundEvent> TABLET1 =
             registerSoundEvent("tablet1");
+    public static final RegistryObject<SoundEvent> WATER =
+            registerSoundEvent("water");
+    public static final RegistryObject<SoundEvent> END =
+            registerSoundEvent("end");
+    public static final RegistryObject<SoundEvent> FIRE =
+            registerSoundEvent("fire");
+    public static final RegistryObject<SoundEvent> AIR =
+            registerSoundEvent("air");
+    public static final RegistryObject<SoundEvent> MECH =
+            registerSoundEvent("mech");
+    public static final RegistryObject<SoundEvent> SAND =
+            registerSoundEvent("sand");
+    public static final RegistryObject<SoundEvent> ICE =
+            registerSoundEvent("ice");
+    public static final RegistryObject<SoundEvent> SORRY =
+            registerSoundEvent("sorry");
 
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation location = new ResourceLocation("storytell", name);

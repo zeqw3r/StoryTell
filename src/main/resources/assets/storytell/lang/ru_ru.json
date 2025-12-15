@@ -19,6 +19,16 @@
 
   "screen.storytell.upgrade_transmitter": "Терминал Улучшенного Передатчика",
   "screen.storytell.enter_command": "Введите команду:",
-  "button.storytell.send": "Отправить"
-
+  "button.storytell.send": "Отправить",
+  "block.storytell.summoning_altar": "Алтарь Призыва",
+  "item.storytell.summoning_altar": "Алтарь Призыва",
+  "tooltip.storytell.altar.description": "Используется для призыва мощных существ",
+  "tooltip.storytell.altar.unbreakable": "Неразрушимый",
+  "tooltip.storytell.altar.usage": "Креатив: Выбор сущности | Выживание: Призыв и очистка области",
+  "screen.storytell.summoning_altar": "Алтарь Призыва",
+  "button.storytell.select_entity": "Выбрать Сущность",
+  "message.storytell.altar.no_entity": "Сущность не выбрана! Используйте в креативе для выбора.",
+  "message.storytell.altar.client_side": "Невозможно призвать сущность на стороне клиента!",
+  "message.storytell.altar.summoned": "Призван %s и уничтожено %d боссов в области",
+  "message.storytell.altar.failed": "Не удалось призвать сущность!"
 }

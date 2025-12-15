@@ -130,5 +130,59 @@
     "sounds": [
       "storytell:music_2"
     ]
+  },
+  "event10": {
+    "subtitle": "subtitles.storytell.event10",
+    "sounds": [
+      "storytell:event10"
+    ]
+  },
+  "water": {
+    "subtitle": "subtitles.storytell.water",
+    "sounds": [
+      "storytell:water"
+    ]
+  },
+  "fire": {
+    "subtitle": "subtitles.storytell.fire",
+    "sounds": [
+      "storytell:fire"
+    ]
+  },
+  "air": {
+    "subtitle": "subtitles.storytell.air",
+    "sounds": [
+      "storytell:air"
+    ]
+  },
+  "ice": {
+    "subtitle": "subtitles.storytell.ice",
+    "sounds": [
+      "storytell:ice"
+    ]
+  },
+  "end": {
+    "subtitle": "subtitles.storytell.end",
+    "sounds": [
+      "storytell:end"
+    ]
+  },
+  "mech": {
+    "subtitle": "subtitles.storytell.mech",
+    "sounds": [
+      "storytell:mech"
+    ]
+  },
+  "sand": {
+    "subtitle": "subtitles.storytell.sand",
+    "sounds": [
+      "storytell:sand"
+    ]
+  },
+  "sorry": {
+    "subtitle": "subtitles.storytell.sorry",
+    "sounds": [
+      "storytell:sorry"
+    ]
   }
 }

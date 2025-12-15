@@ -19,5 +19,16 @@
 
   "screen.storytell.upgrade_transmitter": "Upgrade Transmitter Terminal",
   "screen.storytell.enter_command": "Enter command:",
-  "button.storytell.send": "Send"
+  "button.storytell.send": "Send",
+  "block.storytell.summoning_altar": "Summoning Altar",
+  "item.storytell.summoning_altar": "Summoning Altar",
+  "tooltip.storytell.altar.description": "Used to summon powerful entities",
+  "tooltip.storytell.altar.unbreakable": "Unbreakable",
+  "tooltip.storytell.altar.usage": "Creative: Select entity | Survival: Summon and clear area",
+  "screen.storytell.summoning_altar": "Summoning Altar",
+  "button.storytell.select_entity": "Select Entity",
+  "message.storytell.altar.no_entity": "No entity selected! Use in Creative to select.",
+  "message.storytell.altar.client_side": "Cannot summon entities on client side!",
+  "message.storytell.altar.summoned": "Summoned %s and cleared %d boss entities",
+  "message.storytell.altar.failed": "Failed to summon entity!"
 }
